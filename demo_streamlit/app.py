@@ -5,7 +5,6 @@ sys.path.append(os.path.join(os.getcwd(),"../../")) # for config
 import streamlit as st
 import pandas as pd
 from ast import literal_eval
-from config import HF_CONFIG
 
 # get Data
 data_path = os.path.join(os.getcwd(),"../../data")
