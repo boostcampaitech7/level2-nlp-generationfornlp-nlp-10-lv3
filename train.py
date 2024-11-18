@@ -1,30 +1,29 @@
-
-import torch 
-import numpy as np
+# 표준 라이브러리
+import argparse
+import os
 import random
 
-from utils.utils import format_data, load_config
-
-import sys
-
-
-
-import torch
-import transformers
-from ast import literal_eval
-from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from datasets import Dataset
-import json
+# 외부 라이브러리
+import numpy as np
 import pandas as pd
-import random
-import numpy as np
-import matplotlib.pyplot as plt
-import evaluate
-from sklearn.feature_extraction.text import TfidfVectorizer
-from tqdm import tqdm
-from peft import AutoPeftModelForCausalLM, LoraConfig
+import torch
+from transformers import AutoTokenizer
 
+# 로컬 모듈
+from data_loader.datasets import BaseDataset
+from models.base_model import BaseModel
+from utils.utils import load_config
+
+from dotenv import load_dotenv
+from huggingface_hub import login
+import wandb
+
+load_dotenv()
+hf_api_key = os.getenv('HF_API_KEY')
+wandb_api_key = os.getenv('WANDB_API_KEY')
+
+login(hf_api_key)
+wandb.login(key=wandb_api_key)
 
 # 난수 고정
 def set_seed(random_seed):
@@ -39,35 +38,40 @@ def set_seed(random_seed):
 set_seed(42) # magic number :)
 
 
-train한걸로 실제로 돌려봤을 때 결과 
-test는 ㄴㄴ
-
-val로 결과 파악 
-train data 나 validataion 에 대한 prediction
-
-
-Reason:
-Answer: 
--> val결과 파악용 
-
-
+# wandb 
 def main() :
-    config_path = sys.argv[1] # -> argpaser로 고치기 
-    config = load_config(config_path)
-    
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config_path", type=str,
+                        help="")
+
+    args = parser.parse_args() 
+
+    configs = load_config(args.config_path)
+
+
     tokenizer = AutoTokenizer.from_pretrained(
-        config.model_path_or_name,
+        configs.train_model_path_or_name,
         trust_remote_code=True,
     )
 
-    # 템플릿 읽어서 데이터셋에 전달 
+    if configs.chat_template is not None :
+        tokenizer.chat_template = configs.chat_template
 
 
-    loader 
+    train_data = pd.read_csv(os.path.join(configs.data_dir, configs.train_path))
+    eval_data = pd.read_csv(os.path.join(configs.data_dir, configs.val_path))
 
-    model.train(train_loader, val_loader)
+    train_dataset = BaseDataset(train_data, tokenizer, configs)
+    eval_dataset = BaseDataset(eval_data, tokenizer, configs)
 
-    return 0
+    model = BaseModel(configs, tokenizer)
+
+    wandb.init(project=configs.project, name=configs.sub_project)
+    model.train(train_dataset, eval_dataset)
+
+    # val_outputs = model.eval(eval_dataset)
+    # val_outputs.to_csv(os.path.join(configs.output_dir, configs.~~~), index = False)
+
 
 if __name__ == "__main__":
     main()

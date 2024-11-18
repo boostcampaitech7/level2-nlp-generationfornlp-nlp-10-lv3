@@ -1,17 +1,10 @@
-from ast import literal_eval
-import pandas as pd 
 import yaml
-from datasets import Dataset
+from box import Box
 
-# torch Dataset 
+def load_config(config_file):
+    # Load Config.yaml
+    with open(config_file) as file:
+        config = yaml.safe_load(file) # Dictionary
+        config = Box(config) # . 
 
-
-
-
-
-
-def load_config(config_path) :
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    
-    return config 
+    return config
