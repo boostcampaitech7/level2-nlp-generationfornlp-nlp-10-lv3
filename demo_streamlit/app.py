@@ -94,7 +94,7 @@ def main():
     with problem_area:
         st.subheader("선택지")
         for i, ch in enumerate(choices):
-            st.markdown(f"{i+1}. {ch}")
+            st.markdown(f"```{i+1}. {ch}```")
 
         st.subheader("답")
         st.markdown("Answer : " + str(answer))
