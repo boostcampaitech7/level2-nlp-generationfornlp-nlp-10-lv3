@@ -53,6 +53,7 @@ def main() :
 
     outputs = model.inference(test_dataset)
 
+    os.makedirs("./saved/outputs", exist_ok=True)
     pd.DataFrame(outputs).to_csv(os.path.join("./saved/outputs", configs.output_file), index=False)
 
 
