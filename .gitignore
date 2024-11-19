@@ -1,4 +1,6 @@
 data/*
-saved/*
+saved/models/*
+saved/transfer_learning/*
+saved/outputs/*
 __pycache__
 wandb/*
