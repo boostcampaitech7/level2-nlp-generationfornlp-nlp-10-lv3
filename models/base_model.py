@@ -60,12 +60,12 @@ class BaseModel:
         )
 
         self.peft_config = LoraConfig(
-            r=6,
-            lora_alpha=8,
-            lora_dropout=0.05,
-            target_modules=['q_proj', 'k_proj'],
-            bias="none",
-            task_type="CAUSAL_LM",
+            r=self.configs.rank,
+            lora_alpha=self.configs.lora_alpha,
+            lora_dropout=self.configs.lora_dropout,
+            target_modules=self.configs.target_modules,
+            bias=self.configs.bias,
+            task_type=self.configs.task_type,
         )
         
     def train(self, train_dataset, eval_dataset):
