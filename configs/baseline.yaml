@@ -2,11 +2,11 @@
 project:
   "wandb project name"
 sub_project:
-  "wandb sub project name"
+  "real wandb sub project name"
 
 # data path
 data_dir:
-  "./data" 
+  "../../data" 
 train_path:
   "v0/train.csv"
 val_path:
@@ -30,13 +30,13 @@ padding_side:
 train_model_path_or_name: 
   "beomi/gemma-ko-2b"
 test_model_path_or_name:
-  "beomi/gemma-ko-2b/checkpoint-1234"
+  "beomi/gemma-ko-2b/checkpoint-4974"
 
 # SFT
-epochs: 3
+num_train_epochs: 1
 learning_rate: 2e-5
 weight_decay: 0.01
-logging_steps: 10
+logging_steps: 100
 save_total_limit : 2
 
 # LoRa

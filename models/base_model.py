@@ -42,17 +42,17 @@ class BaseModel:
             do_eval=True,
             lr_scheduler_type="cosine", # 바꾸고 싶으면 요청.
             max_seq_length=configs.max_length,
-            output_dir=os.path.join("./saved/model", configs.train_model_path_or_name),
+            output_dir=os.path.join("./saved/models", configs.train_model_path_or_name),
             per_device_train_batch_size=1,
             per_device_eval_batch_size=1,
             # gradient_checkpointing=True, # 연산속도 느려짐.
-            num_train_epochs=3,
-            learning_rate=2e-5,
-            weight_decay=0.01,
-            logging_steps=1,
+            num_train_epochs=self.configs.num_train_epochs,
+            learning_rate=self.configs.learning_rate,
+            weight_decay=self.configs.weight_decay,
+            logging_steps=self.configs.logging_steps,
             save_strategy="epoch",
             eval_strategy="epoch",
-            save_total_limit=2,
+            save_total_limit=self.configs.save_total_limit,
             save_only_model=True,
             report_to="wandb",
             # fp16=False,
@@ -92,7 +92,7 @@ class BaseModel:
         infer_results = []
 
         pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
-
+       
         self.model.eval()
         with torch.inference_mode():
             for idx in tqdm(range(len(test_dataset))):

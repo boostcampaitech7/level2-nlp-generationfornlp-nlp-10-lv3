@@ -38,7 +38,6 @@ def set_seed(random_seed):
 set_seed(42) # magic number :)
 
 
-# wandb 
 def main() :
     parser = argparse.ArgumentParser()
     parser.add_argument("--config_path", type=str,
@@ -66,7 +65,11 @@ def main() :
 
     model = BaseModel(configs, tokenizer)
 
-    wandb.init(project=configs.project, name=configs.sub_project)
+    wandb.init(project=configs.project, 
+               name=configs.sub_project,
+            #    mode="online",
+            #    settings=wandb.Settings(console="off")
+               )
     model.train(train_dataset, eval_dataset)
 
     # val_outputs = model.eval(eval_dataset)

@@ -36,7 +36,7 @@ def main() :
 
     configs = load_config(args.config_path)
 
-    test_model_path_or_name = os.path.join("./saved/model", configs.test_model_path_or_name)
+    test_model_path_or_name = os.path.join("./saved/models", configs.test_model_path_or_name)
     tokenizer = AutoTokenizer.from_pretrained(
         test_model_path_or_name,
         trust_remote_code=True,
@@ -47,13 +47,13 @@ def main() :
 
     test_data = pd.read_csv(os.path.join(configs.data_dir, 'test.csv'))
 
-    test_dataset = BaseDataset(test_data, tokenizer, configs)
+    test_dataset = BaseDataset(test_data, tokenizer, configs, False)
     
     model = BaseModel(configs, tokenizer)
 
     outputs = model.inference(test_dataset)
 
-    outputs.to_csv(os.path.join("./saved/outputs", configs.output_file), index=False)
+    pd.DataFrame(outputs).to_csv(os.path.join("./saved/outputs", configs.output_file), index=False)
 
 
 if __name__ == "__main__":

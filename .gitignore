@@ -1,4 +1,4 @@
-./data
-./saved
+data/*
+saved/*
 __pycache__
-./wandb
+wandb/*

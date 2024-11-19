@@ -3,10 +3,11 @@ from ast import literal_eval
 
 # 외부 라이브러리
 import pandas as pd
-from torch.utils.data import Dataset
+import torch
+from datasets import Dataset
 
 
-class BaseDataset(Dataset):
+class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, data,
                  tokenizer, configs, do_train = True):
         self.tokenizer = tokenizer
@@ -15,14 +16,17 @@ class BaseDataset(Dataset):
         self.do_train = do_train
         self.dataset = self.format_data(data)
         self.tokens = self.tokenize(self.dataset)
-        if self.max_length is not None:
-            self.tokens = self.tokens.filter(lambda x: len(x["input_ids"]) <= 1024)
+        # if self.max_length is not None:
+        #     self.tokens = self.tokens.filter(lambda x: len(x["input_ids"]) <= self.max_length)
         
     def __len__(self):
-        return len(self.dataset)
+        return len(self.tokens)
     
     def __getitem__(self, idx):
-        return self.tokens[idx]
+        if self.do_train:
+            return self.tokens[idx]
+        else:
+            return self.dataset[idx]
 
     def tokenize(self, dataset):
         def formatting_prompts_func(example):
@@ -61,7 +65,7 @@ class BaseDataset(Dataset):
         return tokenized_dataset
 
     def format_data(self, dataset):
-        def refactor_data(dataset) :
+        def refactor_data(dataset) : # pandas Dataframe 
             records = []
             for _, row in dataset.iterrows():
                 problems = literal_eval(row['problems'])
@@ -82,7 +86,7 @@ class BaseDataset(Dataset):
             df['question_plus'] = df['question_plus'].fillna('')
             df['full_question'] = df.apply(lambda x: x['question'] + ' ' + x['question_plus'] if x['question_plus'] else x['question'], axis=1)
 
-            return df
+            return df # pandas Dataframe 
         
         dataset = refactor_data(dataset)
         processed_dataset = []
@@ -132,4 +136,4 @@ class BaseDataset(Dataset):
                         "len_choices": len_choices,
                     }
                 )
-        return processed_dataset # list 반환 
+        return Dataset.from_pandas(pd.DataFrame(processed_dataset)) 
