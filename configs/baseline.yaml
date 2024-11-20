@@ -1,3 +1,7 @@
+# seed
+seed: 
+  42
+
 # wandb
 project:
   "wandb project name"
