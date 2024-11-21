@@ -2,7 +2,7 @@
 import evaluate
 import numpy as np
 import torch
-
+from datasts import load_metric
 
 def preprocess_logits_for_metrics(logits, labels, tokenizer):
     logits = logits if not isinstance(logits, tuple) else logits[0]
@@ -39,3 +39,22 @@ def compute_metrics(evaluation_result, tokenizer):
     # 정확도 계산
     acc = acc_metric.compute(predictions=predictions, references=labels)
     return acc
+
+
+def ft_compute_metrics(eval_preds, tokenizer):
+    rouge_metric = load_metric("rouge")
+
+    logits, labels = eval_preds
+
+    # 생성된 텍스트와 레이블을 디코딩
+    predictions = tokenizer.batch_decode(logits, skip_special_tokens=True)
+    references = tokenizer.batch_decode(labels, skip_special_tokens=True)
+
+    # ROUGE 계산
+    rouge_result = rouge_metric.compute(predictions=predictions, references=references)
+    
+    return {
+        "rouge1": rouge_result["rouge1"].mid.fmeasure,
+        "rouge2": rouge_result["rouge2"].mid.fmeasure,
+        "rougeL": rouge_result["rougeL"].mid.fmeasure,
+    }

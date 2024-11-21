@@ -20,6 +20,7 @@ do_train:
 ft_model_path_or_name:
   "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
 
+use_lora: True
 lora_rank: 6
 lora_alpha: 8
 lora_target_modules:
