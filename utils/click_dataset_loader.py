@@ -35,6 +35,17 @@ def main(args):
         })
     df = pd.DataFrame(records)
 
+    # clean
+    ## delete data
+    _id = ["KHB_66_22", "CSAT_korean_17_4"]
+    idx = df["id"].apply(lambda x: x in _id)
+    df.drop(index=df[idx].index, inplace=True)
+
+    ## remove duplicated texdt
+    idx = (df["id"] == "Kedu_tradition_12")
+    df.loc[idx, "question"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
+    df.loc[idx, "paragraph"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
+
     df.to_csv(os.path.join(configs.data_dir, "click_dataset.csv"), index=False)
 
 if __name__=="__main__":
