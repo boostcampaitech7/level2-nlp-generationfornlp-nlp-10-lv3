@@ -90,6 +90,9 @@ class BaseDataset(torch.utils.data.Dataset):
         
         dataset = refactor_data(dataset)
         processed_dataset = []
+
+        system_prompt = "지문을 읽고 질문의 답을 구하세요."
+
         for i, row in dataset.iterrows():
             choices_string = "\n".join([f"{idx + 1} - {choice}" for idx, choice in enumerate(row["choices"])])
 
@@ -111,14 +114,14 @@ class BaseDataset(torch.utils.data.Dataset):
                     question=row["question"],
                     choices=choices_string,
                 )
-
+            
             # chat message 형식으로 변환
             if self.do_train:
                 processed_dataset.append(
                     {
                         "id": row["id"],
                         "messages": [
-                            {"role": "system", "content": "지문을 읽고 질문의 답을 구하세요."},
+                            {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_message},
                             {"role": "assistant", "content": f"{row['answer']}"}
                         ],
@@ -130,7 +133,7 @@ class BaseDataset(torch.utils.data.Dataset):
                     {
                         "id": row["id"],
                         "messages": [
-                            {"role": "system", "content": "지문을 읽고 질문의 답을 구하세요."},
+                            {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_message},
                         ],
                         "len_choices": len_choices,

@@ -5,7 +5,8 @@ import random
 
 # 외부 라이브러리
 import pandas as pd
-from transformers import AutoTokenizer
+
+from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
@@ -34,6 +35,14 @@ def main() :
     configs = load_config(args.config_path)
 
     set_seed(configs.seed)
+    
+    model = AutoModelForCausalLM.from_pretrained(
+        configs.train_model_path_or_name,
+        trust_remote_code = True,
+        torch_dtype=torch.float16,
+        device_map="auto"
+    )
+    
 
     tokenizer = AutoTokenizer.from_pretrained(
         configs.train_model_path_or_name,
@@ -50,7 +59,7 @@ def main() :
     train_dataset = BaseDataset(train_data, tokenizer, configs)
     eval_dataset = BaseDataset(eval_data, tokenizer, configs)
 
-    model = BaseModel(configs, tokenizer)
+    model = BaseModel(configs, tokenizer, model)
 
     wandb.init(project=configs.project, 
                name=configs.sub_project,
