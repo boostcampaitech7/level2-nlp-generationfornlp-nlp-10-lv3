@@ -1,16 +1,16 @@
 # wandb
 project:
-  "DongHyeok"
+  "DH gemma2"
 sub_project:
-  "gemma1_base_v0data ver."
+  "base ver."
 
 # data path
 data_dir:
   "./data" 
 train_path:
-  "v0.1.6/train_v0.1.6.csv"
+  "re_train.csv"
 val_path:
-  "val_v0.1.6.csv"
+  "validation.csv"
 output_file:
   "inference_results.csv"
 
@@ -28,8 +28,7 @@ padding_side:
 
 # model
 train_model_path_or_name: 
-  "beomi/gemma-ko-2b"
-  #"meta-llama/Llama-3.2-1B"
+  "bebechien/gemma-2-2b-it-ko"
 test_model_path_or_name:
   "meta-llama/Llama-3.2-1B/checkpoint-5484"
 # SFT
@@ -80,7 +79,7 @@ PROMPT_QUESTION_PLUS: >
   정답:
 
 
-chat_template_switch : 1
+
 chat_template: >
   {% if messages[0]['role'] == 'system' %}
   {% set system_message = messages[0]['content'] %}
@@ -96,3 +95,4 @@ chat_template: >
   {{ content + '<end_of_turn>\n' }}
   {% endif %}
   {% endfor %}
+  

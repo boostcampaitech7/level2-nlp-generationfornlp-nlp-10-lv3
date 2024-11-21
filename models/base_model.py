@@ -30,6 +30,7 @@ class BaseModel:
             torch_dtype = torch.float16,
             trust_remote_code = True,
             device_map="auto",
+            load_in_4bit=False,
         ).to(self.device)
 
         self.data_collator = DataCollatorForCompletionOnlyLM(

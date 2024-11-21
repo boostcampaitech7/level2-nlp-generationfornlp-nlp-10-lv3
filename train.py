@@ -53,7 +53,10 @@ def main() :
         trust_remote_code=True,
     )
 
-    if configs.chat_template is not None :
+    
+    #
+    
+    if configs.chat_template is not "None" :
         tokenizer.chat_template = configs.chat_template
 
 
