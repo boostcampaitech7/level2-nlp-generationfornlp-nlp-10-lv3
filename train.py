@@ -5,7 +5,7 @@ import random
 
 # 외부 라이브러리
 import pandas as pd
-
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # 로컬 모듈
