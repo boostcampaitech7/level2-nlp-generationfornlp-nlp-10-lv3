@@ -1,0 +1,101 @@
+# seed
+seed: 
+  42
+
+# wandb
+project:
+  "wandb project name"
+sub_project:
+  "real wandb sub project name"
+
+# data path
+data_dir:
+  "../../data" 
+train_path:
+  "v0/train.csv"
+val_path:
+  "validation.csv"
+output_file:
+  "inference_results.csv"
+
+# for filtering dataset & setting model's max_length
+max_length:
+  1024
+
+# data collector
+response_template:
+  "<start_of_turn>model"
+
+# tokenizer
+padding_side:
+  'right'
+
+# model
+train_model_path_or_name: 
+  "beomi/gemma-ko-2b"
+test_model_path_or_name:
+  "beomi/gemma-ko-2b/checkpoint-4974"
+
+# SFT
+num_train_epochs: 1
+learning_rate: 2e-5
+weight_decay: 0.01
+logging_steps: 100
+save_total_limit : 2
+
+# LoRa
+rank: 6
+lora_alpha: 8
+lora_dropout : 0.05
+target_modules: 
+  - "q_proj"
+  - "k_proj"
+bias : "none"
+task_type : "CAUSAL_LM"
+
+# prompt
+PROMPT_NO_QUESTION_PLUS: >
+  지문:
+  {paragraph}
+
+  질문:
+  {question}
+
+  선택지:
+  {choices}
+
+  1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  정답:
+
+PROMPT_QUESTION_PLUS: >
+  지문:
+  {paragraph}
+
+  질문:
+  {question}
+
+  <보기>:
+  {question_plus}
+
+  선택지:
+  {choices}
+
+  1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  정답:
+
+# tokenizer의 기본 template을 사용하고 싶다면 null로 표시해주세요.
+chat_template: >
+  {% if messages[0]['role'] == 'system' %}
+  {% set system_message = messages[0]['content'] %}
+  {% endif %}
+  {% if system_message is defined %}
+  {{ system_message }}
+  {% endif %}
+  {% for message in messages %}
+  {% set content = message['content'] %}
+  {% if message['role'] == 'user' %}
+  {{ '<start_of_turn>user\n' + content + '<end_of_turn>\n<start_of_turn>model\n' }}
+  {% elif message['role'] == 'assistant' %}
+  {{ content + '<end_of_turn>\n' }}
+  {% endif %}
+  {% endfor %}
