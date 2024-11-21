@@ -4,15 +4,14 @@ import os
 import random
 
 # 외부 라이브러리
-import numpy as np
 import pandas as pd
-import torch
+
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
 from models.base_model import BaseModel
-from utils.utils import load_config
+from utils.utils import load_config, set_seed
 
 from dotenv import load_dotenv
 from huggingface_hub import login
@@ -25,18 +24,6 @@ wandb_api_key = os.getenv('WANDB_API_KEY')
 login(hf_api_key)
 wandb.login(key=wandb_api_key)
 
-# 난수 고정
-def set_seed(random_seed):
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-set_seed(42) # magic number :)
-
 
 def main() :
     parser = argparse.ArgumentParser()
@@ -47,12 +34,15 @@ def main() :
 
     configs = load_config(args.config_path)
 
+    set_seed(configs.seed)
+    
     model = AutoModelForCausalLM.from_pretrained(
         configs.train_model_path_or_name,
         trust_remote_code = True,
         torch_dtype=torch.float16,
         device_map="auto"
     )
+    
 
     tokenizer = AutoTokenizer.from_pretrained(
         configs.train_model_path_or_name,
@@ -73,8 +63,6 @@ def main() :
 
     wandb.init(project=configs.project, 
                name=configs.sub_project,
-            #    mode="online",
-            #    settings=wandb.Settings(console="off")
                )
     model.train(train_dataset, eval_dataset)
 

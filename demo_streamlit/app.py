@@ -6,8 +6,8 @@ import streamlit as st
 import pandas as pd
 from ast import literal_eval
 
-# get Data
-data_path = os.path.join(os.getcwd(),"../../data")
+
+data_path = os.path.join(os.getcwd(),"/data/ephemeral/home/data/v0.1")
 datas = pd.read_csv(os.path.join(data_path,"train.csv")) # 이곳에 파일명 변경해서 보기
 
 # 현재 선택된 데이터 출력    

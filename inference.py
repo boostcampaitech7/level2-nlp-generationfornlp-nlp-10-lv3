@@ -1,30 +1,15 @@
 # 표준 라이브러리
 import argparse
 import os
-import random
 
 # 외부 라이브러리
-import numpy as np
 import pandas as pd
-import torch
 from transformers import AutoTokenizer
 from peft import AutoPeftModelForCausalLM
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
 from models.base_model import BaseModel
-from utils.utils import load_config
-
-# 난수 고정
-def set_seed(random_seed):
-    torch.manual_seed(random_seed)
-    torch.cuda.manual_seed(random_seed)
-    torch.cuda.manual_seed_all(random_seed)  # if use multi-GPU
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-set_seed(42) # magic number :)
+from utils.utils import load_config, set_seed
 
 
 def main() :
@@ -35,6 +20,8 @@ def main() :
     args = parser.parse_args() 
 
     configs = load_config(args.config_path)
+
+    set_seed(configs.seed) 
 
     test_model_path_or_name = os.path.join("./saved/models", configs.test_model_path_or_name)
     print(test_model_path_or_name)

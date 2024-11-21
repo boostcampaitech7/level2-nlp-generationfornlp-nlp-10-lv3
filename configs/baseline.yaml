@@ -1,3 +1,7 @@
+# seed
+seed: 
+  42
+
 # wandb
 project:
   "wandb project name"
@@ -14,7 +18,7 @@ val_path:
 output_file:
   "inference_results.csv"
 
-# dataset
+# for filtering dataset & setting model's max_length
 max_length:
   1024
 
@@ -79,6 +83,7 @@ PROMPT_QUESTION_PLUS: >
   1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
   정답:
 
+# tokenizer의 기본 template을 사용하고 싶다면 null로 표시해주세요.
 chat_template: >
   {% if messages[0]['role'] == 'system' %}
   {% set system_message = messages[0]['content'] %}
