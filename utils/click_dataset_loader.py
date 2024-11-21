@@ -66,6 +66,14 @@ def main(args):
             "search_patterns": [r"^다음.+\?.+", r"^다음.+\?\n"],
             "pattern": r"^다음.+\?"
         },
+        {
+            "search_patterns": [r"^다음.+고르십시오\..+", r"^다음.+고르십시오\.\n"],
+            "pattern": r"^다음.+고르십시오\."
+        },
+        {
+            "search_patterns": [r"^다음.+답하십시오\..+", r"^다음.+답하십시오\.\n"],
+            "pattern": r"^다음.+답하십시오\."
+        },
     ]
 
     num_of_cases = len(split_types)
