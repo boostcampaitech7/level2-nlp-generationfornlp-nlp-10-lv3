@@ -7,6 +7,19 @@ from datasets import load_dataset
 
 from utils.utils import load_config
 
+def srch_ptrn(pattern, text):  ## search for data that needs to be split using a search pattern
+    return True if re.match(pattern, text) else False
+
+def split_question(
+        question,
+        paragraph,
+        pattern
+):
+    if question == paragraph:  ## for case the paragraph is empty
+        return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
+    else:  ## not empty
+        return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
+
 def main(args):
     configs = load_config(args.config_path)
 
@@ -46,7 +59,47 @@ def main(args):
     df.loc[idx, "question"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
     df.loc[idx, "paragraph"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
 
+    # split
+    ## type1. 다음 ~~ ? + paragraph
+    split_types = [
+        {
+            "search_patterns": [r"^다음.+\?.+", r"^다음.+\?\n"],
+            "pattern": r"^다음.+\?"
+        },
+    ]
+
+    num_of_cases = len(split_types)
+    cnt = {f"Type_{i}": 0 for i in range(1, num_of_cases+1)}
+    questions = []
+    paragraphs = []
+    for _, row in df.iterrows():
+        for idx, split_type in enumerate(split_types):
+            if any([srch_ptrn(search_pattern, row.question) for search_pattern in split_type["search_patterns"]]):
+                question, paragraph = split_question(
+                    question=row.question,
+                    paragraph=row.paragraph,
+                    pattern=split_type["pattern"]
+                )
+                questions.append(question)
+                paragraphs.append(paragraph)
+                cnt[f"Type_{idx+1}"] += 1
+
+                break
+        else:
+            questions.append(row.question)
+            paragraphs.append(row.paragraph)
+
+    df["question"] = questions
+    df["paragraph"] = paragraphs
+
+    cnt["unsplitted"] = df.shape[0] - sum(cnt.values())
+    cnt["total"] = df.shape[0]
+    summary = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
+    print("**Summary of text split results**")
+    print(summary)
+    
     df.to_csv(os.path.join(configs.data_dir, "click_dataset.csv"), index=False)
+    print(f"\nClick Dataset successfully saved at {configs.data_dir}")
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
