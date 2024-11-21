@@ -82,6 +82,8 @@ def main(args):
     paragraphs = []
     for _, row in df.iterrows():
         for idx, split_type in enumerate(split_types):
+            if any([row.id.startswith(x) for x in ["KITP", "PSAT"]]): ## exclude simple question type
+                continue
             if any([srch_ptrn(search_pattern, row.question) for search_pattern in split_type["search_patterns"]]):
                 question, paragraph = split_question(
                     question=row.question,
