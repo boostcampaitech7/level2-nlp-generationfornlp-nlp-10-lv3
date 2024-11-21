@@ -6,6 +6,7 @@ import os
 import pandas as pd
 from transformers import AutoTokenizer
 from peft import AutoPeftModelForCausalLM
+import torch
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
 from models.base_model import BaseModel
@@ -24,7 +25,7 @@ def main() :
     set_seed(configs.seed) 
 
     test_model_path_or_name = os.path.join("./saved/models", configs.test_model_path_or_name)
-    print(test_model_path_or_name)
+
     model = AutoPeftModelForCausalLM.from_pretrained(
         test_model_path_or_name,
         trust_remote_code=True,

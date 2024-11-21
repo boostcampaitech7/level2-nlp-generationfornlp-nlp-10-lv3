@@ -84,7 +84,7 @@ class BaseModel:
 
         return # 데이터 프레임 (판다스)
 
-    def inference_generate(self, test_dataset):
+    def inference_generate(self, test_dataset): # 현재 작동 X
         # test_datsaet은 Tokenized가 된 데이터셋이 아님
         generated_infer_results = []
         
@@ -125,7 +125,7 @@ class BaseModel:
 
         pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
         self.model.eval()
-        
+
         with torch.inference_mode():
             for idx in tqdm(range(len(test_dataset))):
                 _id = test_dataset[idx]['id']
