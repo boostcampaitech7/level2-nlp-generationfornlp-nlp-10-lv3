@@ -9,18 +9,18 @@ sub_project:
   "test"
 
 # data
-data_pathL:
-  "/data/ephemeral/home/data/v1/fine_tuning"
+data_path:
+  "/data/ephemeral/home/data/v1/fine_tuning/history_finance_textbook"
 output_path:
-  "../saved/outputs/test.csv"
+  "../saved/outputs/history_finance_textbook_1.csv"
 
 # model
-do_train:
-  True
+do_train: False
 ft_model_path_or_name:
   "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
+max_length: 256
 
-use_lora: True
+use_lora: True # False, using for evaluate pre-trained model
 lora_rank: 6
 lora_alpha: 8
 lora_target_modules:
@@ -32,9 +32,9 @@ lora_task_type: "CAUSAL_LM"
 
 steps: 20
 save_total_limit: 2
-per_device_train_batch_size: 1
+batch_size: 1
 gradient_accumulation_steps: 4
-num_train_epochs: 10
+num_train_epochs: 1
 lr_scheduler_type: "cosine"
 learning_rate: 2e-5
 weight_decay: 0.01

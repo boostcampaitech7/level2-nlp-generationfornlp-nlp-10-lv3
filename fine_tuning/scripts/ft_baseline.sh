@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python ./train.py --config_path "./configs/.yaml"
+python ./fine_tuning/ft_main.py --config_path "./fine_tuning/configs/ft_baseline.yaml"

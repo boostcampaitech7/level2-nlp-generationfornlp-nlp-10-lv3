@@ -2,7 +2,8 @@
 import evaluate
 import numpy as np
 import torch
-from datasts import load_metric
+import torch.nn.functional as F
+
 
 def preprocess_logits_for_metrics(logits, labels, tokenizer):
     logits = logits if not isinstance(logits, tuple) else logits[0]
@@ -42,19 +43,161 @@ def compute_metrics(evaluation_result, tokenizer):
 
 
 def ft_compute_metrics(eval_preds, tokenizer):
-    rouge_metric = load_metric("rouge")
+    # DISTINCT-N 계산 함수
+    def distinct_n(predictions, n=2):
+        ngrams = set()
+        total_ngrams = 0
+        for pred in predictions:
+            tokens = pred.split()
+            total_ngrams += len(tokens) - n + 1
+            ngrams.update(tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1))
+        return len(ngrams) / total_ngrams if total_ngrams > 0 else 0
 
+    # Perplexity 계산 함수
+    def calculate_perplexity(logits):
+        logits_tensor = torch.tensor(logits).to("cuda")  # GPU로 이동
+        probs = F.softmax(logits_tensor, dim=-1)  # logits을 확률로 변환
+        log_probs = torch.log(probs + 1e-9)  # log 계산 시 NaN 방지
+        perplexity = torch.exp(-torch.mean(log_probs))  # perplexity 계산
+        return perplexity.item()
+
+    # 메트릭 초기화
+    rouge_metric = evaluate.load("rouge")
+    bleu_metric = evaluate.load("bleu")
+    meteor_metric = evaluate.load("meteor")
+    ter_metric = evaluate.load("ter")
+
+    # eval_preds에서 logits과 labels 추출
     logits, labels = eval_preds
 
+    # logits에서 가장 높은 확률을 가진 토큰 ID 추출
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    logits_tensor = torch.tensor(logits) # GPU로 이동
+    predicted_ids = torch.argmax(logits_tensor, dim=-1)
+
+    # labels의 -100 값을 tokenizer.pad_token_id로 변경
+    labels = [
+        [token if token != -100 else tokenizer.pad_token_id for token in label]
+        for label in labels
+    ]
+
     # 생성된 텍스트와 레이블을 디코딩
-    predictions = tokenizer.batch_decode(logits, skip_special_tokens=True)
+    predictions = tokenizer.batch_decode(predicted_ids.tolist(), skip_special_tokens=True)
     references = tokenizer.batch_decode(labels, skip_special_tokens=True)
 
-    # ROUGE 계산
+    # 메트릭 계산
     rouge_result = rouge_metric.compute(predictions=predictions, references=references)
-    
+    bleu_result = bleu_metric.compute(predictions=predictions, references=references)
+    meteor_result = meteor_metric.compute(predictions=predictions, references=references)
+    ter_result = ter_metric.compute(predictions=predictions, references=references)
+    distinct2 = distinct_n(predictions, n=2)
+    perplexity = calculate_perplexity(logits)
+
+    # 결과 반환
     return {
         "rouge1": rouge_result["rouge1"].mid.fmeasure,
         "rouge2": rouge_result["rouge2"].mid.fmeasure,
         "rougeL": rouge_result["rougeL"].mid.fmeasure,
+        "bleu": bleu_result["bleu"],
+        "meteor": meteor_result["meteor"],
+        "ter": ter_result["score"],
+        "distinct2": distinct2,
+        "perplexity": perplexity,
     }
+
+def single_sample_evaluate(eval_preds, tokenizer):
+    # DISTINCT-N 계산 함수
+    def distinct_n(predictions, n=2):
+        ngrams = set()
+        total_ngrams = 0
+        for pred in predictions:
+            tokens = pred.split()
+            total_ngrams += len(tokens) - n + 1
+            ngrams.update(tuple(tokens[i:i+n]) for i in range(len(tokens)-n+1))
+        return len(ngrams) / total_ngrams if total_ngrams > 0 else 0
+
+    # Perplexity 계산 함수
+    def calculate_perplexity(logits):
+        logits_tensor = torch.tensor(logits).to("cuda")  # GPU로 이동
+        probs = F.softmax(logits_tensor, dim=-1)  # logits을 확률로 변환
+        log_probs = torch.log(probs + 1e-9)  # log 계산 시 NaN 방지
+        perplexity = torch.exp(-torch.mean(log_probs))  # perplexity 계산
+        return perplexity.item()
+    
+    rouge_metric = evaluate.load("rouge")
+    bleu_metric = evaluate.load("bleu")
+    meteor_metric = evaluate.load("meteor")
+    ter_metric = evaluate.load("ter")
+
+    logits, labels = eval_preds
+    total_perplexity = 0
+
+    metrics_results = {
+        "rouge1": [],
+        "rouge2": [],
+        "rougeL": [],
+        "bleu": [],
+        "meteor": [],
+        "ter": [],
+        "distinct2": [],
+    }
+
+    for logit, label in zip(logits, labels):
+        logit_tensor = torch.tensor(logit).unsqueeze(0).to("cuda")
+        predicted_ids = torch.argmax(logit_tensor, dim=-1)
+
+        label = [token if token != -100 else tokenizer.pad_token_id for token in label]
+
+        # 생성된 텍스트와 레이블을 디코딩
+        prediction = tokenizer.decode(predicted_ids[0].tolist(), skip_special_tokens=True)
+        reference = tokenizer.decode(label, skip_special_tokens=True)
+
+        # Perplexity 계산
+        perplexity = calculate_perplexity(logit_tensor)
+        total_perplexity += perplexity
+
+        # 메트릭 계산
+        rouge_result = rouge_metric.compute(predictions=[prediction], references=[reference])
+        bleu_result = bleu_metric.compute(predictions=[prediction], references=[reference])
+        meteor_result = meteor_metric.compute(predictions=[prediction], references=[reference])
+        ter_result = ter_metric.compute(predictions=[prediction], references=[reference])
+        distinct2 = distinct_n([prediction], n=2)
+
+        # 결과 저장
+        metrics_results["rouge1"].append(rouge_result["rouge1"].mid.fmeasure)
+        metrics_results["rouge2"].append(rouge_result["rouge2"].mid.fmeasure)
+        metrics_results["rougeL"].append(rouge_result["rougeL"].mid.fmeasure)
+        metrics_results["bleu"].append(bleu_result["bleu"])
+        metrics_results["meteor"].append(meteor_result["meteor"])
+        metrics_results["ter"].append(ter_result["score"])
+        metrics_results["distinct2"].append(distinct2)
+
+    # 최종 평균 계산
+    num_samples = len(logits)
+    metrics_results = {k: np.mean(v) for k, v in metrics_results.items()}
+    metrics_results["perplexity"] = total_perplexity / num_samples
+
+    return metrics_results
+
+
+def single_sample_perplexity_evaluate(eval_preds):
+    # Perplexity 계산 함수
+    def calculate_perplexity(logits):
+        logits_tensor = torch.tensor(logits).to("cuda")  # GPU로 이동
+        probs = F.softmax(logits_tensor, dim=-1)  # logits을 확률로 변환
+        log_probs = torch.log(probs + 1e-9)  # log 계산 시 NaN 방지
+        perplexity = torch.exp(-torch.mean(log_probs))  # perplexity 계산
+        return perplexity.item()
+    
+    logits, _ = eval_preds
+    total_perplexity = 0
+
+    for logit in logits:
+        logit_tensor = torch.tensor(logit).unsqueeze(0).to("cuda")
+        perplexity = calculate_perplexity(logit_tensor)
+        total_perplexity += perplexity
+
+    num_samples = len(logits)
+    average_perplexity = total_perplexity / num_samples
+
+    return {"perplexity": average_perplexity}

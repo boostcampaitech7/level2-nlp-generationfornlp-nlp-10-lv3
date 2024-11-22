@@ -10,3 +10,7 @@ peft
 wandb
 load_dotenv
 python-box
+absl-py 
+nltk 
+rouge-score
+sacrebleu
