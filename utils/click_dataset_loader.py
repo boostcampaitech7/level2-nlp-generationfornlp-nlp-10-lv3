@@ -74,6 +74,10 @@ def main(args):
             "search_patterns": [r"^다음.+답하십시오\..+", r"^다음.+답하십시오\.\n"],
             "pattern": r"^다음.+답하십시오\."
         },
+        {
+            "search_patterns": [r".+것은\?.+", r".+것은\?\n"],
+            "pattern": r".+것은\?"
+        },
     ]
 
     num_of_cases = len(split_types)
