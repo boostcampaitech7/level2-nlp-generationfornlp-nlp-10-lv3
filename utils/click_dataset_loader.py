@@ -111,9 +111,49 @@ def main(args):
     summary = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
     print("**Summary of text split results**")
     print(summary)
+
+    # group the data by id type / group = ["train", "augment", "remove"]
+    ## ID tags for each training, augmentation
+    tags_train = ["Kedu_politics_1", "CSAT", "KHB", "TK"] ## + PSE(only paragraph != question)
+    tags_augment = ["KIIP_economy", "KIIP_geography", "KIIP_tradition",
+                   "KIIP_law", "Kedu_economy", "Kedu_tradition", "PSAT"] ## + Kedu, Kedu_society(only paragraph == question)
+
+    ## index extraction
+    idx_train_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_train]))
+    idx_train_2 = (
+        df["id"].apply(
+            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
+        )
+    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    idx_train_3 = (
+        df["id"].apply(
+            lambda x: bool(re.match(r"^Kedu_[0-9]+", x))
+        )
+    ) & (df["question"] != df["paragraph"]) ## Kedu(only paragraph == question)
+    idx_train = idx_train_1 | idx_train_2 | idx_train_3
+
+    idx_augment_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_augment]))
+    idx_augment_2 = (
+        df["id"].apply(
+            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
+        )
+    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    idx_augment_3 = (
+        df["id"].apply(
+            lambda x: bool(re.match(r"^Kedu_[0-9]+", x))
+        )
+    ) & (df["question"] == df["paragraph"]) ## Kedu(only paragraph == question)
+    idx_augment = idx_augment_1 | idx_augment_2 | idx_augment_3
+
+    ## slicing
+    click_for_train = df.loc[idx_train]
+    click_for_augment = df.loc[idx_augment]
+    print(f"\nSuccessfully grouped the click data into 'for_train', 'for_augment'")
     
-    df.to_csv(os.path.join(configs.data_dir, "click_dataset.csv"), index=False)
-    print(f"\nClick Dataset successfully saved at {configs.data_dir}")
+    ## saving
+    click_for_train.to_csv(os.path.join(configs.data_dir, "click_for_train.csv"), index=False)
+    click_for_augment.to_csv(os.path.join(configs.data_dir, "click_for_augment.csv"), index=False)
+    print(f"\nClick Datasets(for training + for augmentation) successfully saved at {configs.data_dir}")
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
