@@ -108,9 +108,9 @@ def main(args):
 
     cnt["unsplitted"] = df.shape[0] - sum(cnt.values())
     cnt["total"] = df.shape[0]
-    summary = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
-    print("**Summary of text split results**")
-    print(summary)
+    results = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
+    print("**Results for text split**")
+    print(results)
 
     # group the data by id type / group = ["train", "augment", "remove"]
     ## ID tags for each training, augmentation
@@ -148,7 +148,12 @@ def main(args):
     ## slicing
     click_for_train = df.loc[idx_train]
     click_for_augment = df.loc[idx_augment]
-    print(f"\nSuccessfully grouped the click data into 'for_train', 'for_augment'")
+    cnt = {"For Training": click_for_train.shape[0], "For Augmentation": click_for_augment.shape[0]}
+    cnt["Removed"] = df.shape[0] - sum(cnt.values())
+    cnt["Total"] = df.shape[0]
+    results = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
+    print("\n**Results for grouping by id type**")
+    print(results)
     
     ## saving
     click_for_train.to_csv(os.path.join(configs.data_dir, "click_for_train.csv"), index=False)
