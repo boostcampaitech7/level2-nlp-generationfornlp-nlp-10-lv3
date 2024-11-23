@@ -10,15 +10,15 @@ sub_project:
 
 # data
 data_path:
-  "/data/ephemeral/home/data/v1/fine_tuning/history_finance_textbook"
+  "/data/ephemeral/home/data/v1/fine_tuning/qa_dataset"
 output_path:
-  "../saved/outputs/history_finance_textbook_1.csv"
+  "/data/ephemeral/home/leeinseol/level2-nlp-generationfornlp-nlp-10-lv3/saved/outputs/original_qa.csv"
 
 # model
-do_train: False
+do_train: True
 ft_model_path_or_name:
   "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
-max_length: 256
+max_length: 1024
 
 use_lora: True # False, using for evaluate pre-trained model
 lora_rank: 6

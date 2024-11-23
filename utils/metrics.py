@@ -4,6 +4,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+# 로컬 모듈
+from utils.utils import extract_answer
+
 
 def preprocess_logits_for_metrics(logits, labels, tokenizer):
     logits = logits if not isinstance(logits, tuple) else logits[0]
@@ -201,3 +204,60 @@ def single_sample_perplexity_evaluate(eval_preds):
     average_perplexity = total_perplexity / num_samples
 
     return {"perplexity": average_perplexity}
+
+def compute_qa_metrics(eval_preds, tokenizer):
+    # Load metrics
+    accuracy_metric = evaluate.load("accuracy")
+    f1_metric = evaluate.load("f1")
+
+    logits, labels = eval_preds
+
+    # Convert logits to predictions
+    predictions = np.argmax(logits, axis=-1)
+
+    # Remove padding tokens from labels
+    labels = [[label for label in label_row if label != -100] for label_row in labels]
+
+    # Match the length of predictions and labels
+    flat_predictions = []
+    flat_labels = []
+
+    for pred, label in zip(predictions, labels):
+        length = min(len(pred), len(label))
+        flat_predictions.extend(pred[:length])
+        flat_labels.extend(label[:length])
+
+    # Compute metrics
+    accuracy_result = accuracy_metric.compute(predictions=flat_predictions, references=flat_labels)
+    f1_result = f1_metric.compute(predictions=flat_predictions, references=flat_labels, average="macro")
+
+    return {
+        "accuracy": accuracy_result["accuracy"],
+        "f1": f1_result["f1"]
+    }
+
+def ft_preprocess_logits_for_metrics(logits, labels, tokenizer):
+    predictions = torch.argmax(logits, dim=-1) # logits -> predictions: [batch_size, seq_len]
+
+    decoded_predictions = tokenizer.batch_decode(predictions, skip_special_tokens=True)
+    # 디코딩 (토큰 ID -> 텍스트)
+
+    extracted_answers = [extract_answer(pred) for pred in decoded_predictions]
+    # "정답:" 이후 텍스트 추출
+
+    # 추출된 텍스트를 다시 토큰화 -> 로짓과 동일한 텐서 크기로 변환
+    tokenized_answers = tokenizer(
+        extracted_answers,
+        padding="max_length",  # 로짓과 동일한 길이로 패딩
+        max_length=logits.size(1),
+        truncation=True,
+        return_tensors="pt"
+    )
+
+    # tokenized_answers["input_ids"]를 3D 텐서로 변환
+    # input_ids: [batch_size, seq_len] -> 3D 형태로 복원
+    processed_logits = torch.zeros_like(logits)  # 원래 로짓과 동일한 크기의 텐서 생성
+    for i, input_id in enumerate(tokenized_answers["input_ids"]):
+        processed_logits[i, :len(input_id), input_id] = 1.0  # One-hot encoding 형태로 설정
+
+    return processed_logits

@@ -4,16 +4,17 @@ from tqdm import tqdm
 
 # 외부 라이브러리
 import pandas as pd
+import numpy as np
 from transformers import (
-    AutoModelForCausalLM, AutoTokenizer, 
+    AutoModelForCausalLM, 
     TrainingArguments, Trainer,
-    DataCollatorWithPadding, DataCollatorForSeq2Seq
 )
 from peft import LoraConfig, get_peft_model
+from sklearn.metrics import accuracy_score, f1_score
 
 # 로컬 모듈
-from utils.metrics import ft_compute_metrics, single_sample_perplexity_evaluate
-
+from utils.metrics import ft_preprocess_logits_for_metrics, compute_qa_metrics
+from utils.utils import extract_answer
 
 class FineTuningModel:
     def __init__(self, configs, tokenizer):
@@ -42,15 +43,6 @@ class FineTuningModel:
         
         self.model.to(self.device)
 
-        # self.data_collator = DataCollatorWithPadding(tokenizer, 
-        #                                              padding=True,  # 패딩 활성화
-        #                                             )
-        # self.data_collator = DataCollatorForSeq2Seq(
-        #     tokenizer=self.tokenizer,
-        #     model=self.model,
-        #     padding=True
-        # )
-        
         self.training_args = TrainingArguments(
             output_dir = f"../saved/fine_tuning/{configs.ft_model_path_or_name}",
             # eval_strategy = "steps",
@@ -58,10 +50,10 @@ class FineTuningModel:
             # eval_steps=configs.steps,
             # save_steps=configs.steps,
             save_strategy = "epoch",
-            # eval_strategy = "epoch",
-            # load_best_model_at_end=True,
-            eval_strategy = "no",
-            load_best_model_at_end=False,
+            eval_strategy = "epoch",
+            load_best_model_at_end=True,
+            # eval_strategy = "no",
+            # load_best_model_at_end=False,
             save_total_limit = configs.save_total_limit,
             save_only_model = True,
             per_device_train_batch_size = configs.batch_size,
@@ -73,7 +65,7 @@ class FineTuningModel:
             weight_decay = configs.weight_decay,
             logging_steps = configs.steps,
             report_to = "wandb",
-            fp16=True,
+            # fp16=True,
             eval_accumulation_steps=10
         )
 
@@ -83,37 +75,52 @@ class FineTuningModel:
             args = self.training_args,
             train_dataset = train_dataset,
             eval_dataset=eval_dataset,
-            # data_collator = self.data_collator,
             tokenizer = self.tokenizer,
-            # compute_metrics = lambda eval_results: ft_compute_metrics(eval_results, self.tokenizer),
-            compute_metrics = single_sample_perplexity_evaluate,
+            compute_metrics = lambda eval_results: compute_qa_metrics(eval_results, self.tokenizer),
+            preprocess_logits_for_metrics=lambda logits, labels: ft_preprocess_logits_for_metrics(logits, labels, self.tokenizer),
         )
 
         self.trainer.train()
     
     def inference(self, test_dataset):
-        text = []
-        origin_summary = []
-        generated_summary = []
+        question = []
+        choice = []
+        predictions = []
+        references = []
+
         for data in tqdm(test_dataset):
-            inputs = self.tokenizer(data['text'],
-                                    return_tensors='pt',
-                                    truncation=True,
-                                    ).to(self.device)
+            input_ids = torch.tensor(data['input_ids'], device=self.device).unsqueeze(0)
+            attention_mask = torch.tensor(data['attention_mask'], device=self.device).unsqueeze(0)
+                
             outputs = self.model.generate(
-                inputs['input_ids'],
-                max_new_tokens = 256,
+                input_ids = input_ids,
+                attention_mask = attention_mask,
+                max_new_tokens = 50,
                 num_beams = 5,
             )
-            generated_text = self.tokenizer.decode(outputs[0],
-                                                   skip_special_tokens=True
-                                                   )
-            text.append(data['text'])
-            origin_summary.append(data['summary'])
-            generated_summary.append(generated_text)        
-       
-        pd
+            generated_text = self.tokenizer.decode(
+                outputs[0],
+                skip_special_tokens=True,
+            )
+            predicted_answer  = extract_answer(generated_text)
 
-        return pd.DataFrame({'text' : text,
-                             'origin': origin_summary,
-                             'generated' : generated_summary})
+            # 원본 정답 가져오기
+            true_answer = data['answer']
+            # 정답 저장
+            predictions.append(predicted_answer)
+            references.append(true_answer)
+
+            question.append(data['question'])
+            choice.append(data['choice'])    
+
+        accuracy = accuracy_score(references, predictions)
+        f1 = f1_score(references, predictions, average="macro")
+        metrics = {
+            "accuracy" : accuracy,
+            "f1" : f1,
+        }
+        results = pd.DataFrame({'question' : question,
+                                'choice' : choice,
+                                'origin_answer': references,
+                                'generated_answer' : predictions})
+        return results, metrics

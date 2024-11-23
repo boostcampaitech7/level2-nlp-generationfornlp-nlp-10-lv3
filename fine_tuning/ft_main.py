@@ -52,9 +52,13 @@ def main() :
     if configs.do_train:
         model.train(train_dataset, val_dataset)
 
-    outputs = model.inference(test_dataset)
+
+    outputs, metrics = model.inference(test_dataset) 
 
     outputs.to_csv(configs.output_path, index = False)
+    wandb.log(metrics)
+
+    wandb.finish()
 
 
 if __name__ == "__main__":

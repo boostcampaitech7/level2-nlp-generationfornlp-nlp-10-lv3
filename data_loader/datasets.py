@@ -161,9 +161,9 @@ class FineTuningDataset(torch.utils.data.Dataset):
     def preprocess_function(self, examples):
         if self.is_eval:
             # 평가 데이터 전처리
-            prompt = "다음 문서를 요약하세요:\n"
+            prompt = "\n질문에 알맞은 선택지를 골라 정답만 출력하세요. \n정답:"
             inputs = self.tokenizer(
-                [prompt + t for t in examples["text"]],
+                ["질문: "+t+"\n선택지: "+c+prompt for t, c in zip(examples["question"], examples['choice'])], # 
                 truncation=True,
                 padding="max_length",
                 max_length=self.configs.max_length,
@@ -171,7 +171,7 @@ class FineTuningDataset(torch.utils.data.Dataset):
             # 타겟 데이터 전처리
             with self.tokenizer.as_target_tokenizer():
                 labels = self.tokenizer(
-                    examples["summary"],
+                    examples["answer"],
                     truncation=True,
                     padding="max_length",
                     max_length=self.configs.max_length,
