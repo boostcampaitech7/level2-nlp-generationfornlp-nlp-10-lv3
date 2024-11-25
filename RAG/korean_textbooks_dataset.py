@@ -9,15 +9,16 @@ def main():
     
     # 사용 가능한 모든 config
     configs = [
-        'claude_evol', 'code-alpaca', 'helpsteer', 'ko_wikidata',
-        'mmlu_abstract_algebra', 'mmlu_all', 'mmlu_anatomy', 'mmlu_astronomy',
-        'mmlu_business_ethics', 'mmlu_clinical_knowledge', 'mmlu_college_chemistry', 
-        'mmlu_econometrics', 'mmlu_formal_logic', 'mmlu_global_facts',
-        'mmlu_high_school_european_history', 'mmlu_high_school_geography', 'mmlu_high_school_microeconomics', 
+        'ko_wikidata',
+        # 'claude_evol', 'code-alpaca', 'helpsteer', 
+        # 'mmlu_abstract_algebra', 'mmlu_all', 'mmlu_anatomy', 'mmlu_astronomy',
+        'mmlu_business_ethics', # 'mmlu_clinical_knowledge', 'mmlu_college_chemistry', 
+        'mmlu_econometrics', 'mmlu_global_facts', # 'mmlu_formal_logic', 
+        'mmlu_high_school_geography', 'mmlu_high_school_microeconomics', 
         'mmlu_high_school_government_and_politics', 'mmlu_high_school_macroeconomics',
-        'mmlu_high_school_psychology', 'mmlu_high_school_us_history',
+        'mmlu_high_school_psychology', # 'mmlu_high_school_us_history', 'mmlu_high_school_european_history', 
         'mmlu_high_school_world_history', 'mmlu_human_aging', 'mmlu_human_sexuality',
-        'mmlu_international_law', 'normal_instructions', 'tiny-textbooks'
+        # 'mmlu_international_law', 'normal_instructions', 'tiny-textbooks'
         # 'mmlu_high_school_mathematics', 'mmlu_high_school_physics', 'mmlu_high_school_statistics', 
         # 'mmlu_college_computer_science', 'mmlu_college_mathematics',
         # 'mmlu_college_medicine', 'mmlu_college_physics', 'mmlu_computer_security',
@@ -28,8 +29,8 @@ def main():
 
     # train, validation, test 모두 병합
     all_train_data = []
-    all_validation_data = []
-    all_test_data = []
+    # all_validation_data = []
+    # all_test_data = []
 
     for config in configs:
         dataset = load_dataset('maywell/korean_textbooks', config)
@@ -46,11 +47,12 @@ def main():
     # validation_dataset = concatenate_datasets(all_validation_data) if all_validation_data else None
     # test_dataset = concatenate_datasets(all_test_data) if all_test_data else None
 
-    korean_textbook = {'text':train_dataset['text']}
+    korean_textbook = {'text':train_dataset['text'], 'id': list(range(len(train_dataset['text'])))}
     korean_textbook = Dataset.from_dict(korean_textbook)
 
     korean_textbook.save_to_disk(args.save_path)
     print(f"Korean textbooks savd in {args.save_path}")
+    print(f"total : {len(korean_textbook)}")
 
 if __name__ == "__main__":
     main()

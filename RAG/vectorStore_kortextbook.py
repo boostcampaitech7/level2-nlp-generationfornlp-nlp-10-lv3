@@ -1,54 +1,23 @@
 import argparse
 from datasets import load_from_disk
-from retrievals import AutoModelForEmbedding
+from sentence_transformers import SentenceTransformer
 from transformers import AutoConfig
 from tqdm import tqdm
 from milvus_database import MilvusDatabase
+import numpy as np
 
 
-def get_embedding(model, dataset, db, collection_name, 
-                  batch_size, start_idx=0, save_interval=100):
-    
-    # Too much data, so saved for a specific step.
-    save_step = save_interval * batch_size
-    ids_list = []
-    texts_list = []
-    vectors_list = []
-    for i in tqdm(range(start_idx, len(dataset), batch_size), desc="Calculating embeddings"):
-        batch_texts = dataset[i:i+batch_size]['text']
-        batch_embeddings = model.encode(batch_texts).tolist() # numpy.ndarray -> List[List]
-        ids = list(range(i, i+batch_size))
+def embedding_text(model, datasets, batch_size):
+    embeddings_list = []
 
-        ids_list.extend(ids)
-        texts_list.extend(batch_texts)
-        vectors_list.extend(batch_embeddings)
+    # 데이터를 batch_size로 나눕니다.
+    for i in tqdm(range(0, len(datasets), batch_size), desc="Embedding batches"):
+        batch_texts = datasets['text'].iloc[i:i + batch_size].tolist()
+        batch_embeddings = model.encode(batch_texts, show_progress_bar=False)  # 각 배치에 대해 embedding 수행
+        embeddings_list.extend(batch_embeddings)  # 결과를 리스트에 추가
 
-        if (i % save_step == 0) & (i > 0):
-            saved_data = {
-                "id" : ids_list,
-                "vector" : texts_list,
-                "text" : vectors_list,
-            }
-            db.milvus_client.insert(
-                collection_name=collection_name,
-                data=saved_data,
-            )
-            ids_list = []
-            texts_list = []
-            vectors_list = []
-            print(f"{i // save_step}th step saved.")
-    
-    if ids_list: # Check if there is remaining data
-        saved_data = {
-            "id" : ids_list,
-            "vector" : texts_list,
-            "text" : vectors_list,
-        }
-        db.milvus_client.insert(
-            collection_name=collection_name,
-            data=saved_data,
-        )
-        print("Final step saved.")
+    datasets["emb"] = embeddings_list
+    return datasets
 
 
 def main():
@@ -64,7 +33,7 @@ def main():
                         default="korean_textbooks",
                         help="")
     parser.add_argument("--batch_size", type=int,
-                        default=4,
+                        default=512,
                         help="")
     parser.add_argument("--drop_collection", type=bool,
                         default=True,
@@ -72,13 +41,12 @@ def main():
     args = parser.parse_args() 
     
     model_config = AutoConfig.from_pretrained(args.model_name)
-    model = AutoModelForEmbedding.from_pretrained(
-        args.model_name,
-        pooling_method="mean",
-    )
+    model = SentenceTransformer(args.model_name, device="cuda")
     embed_dim = model_config.hidden_size
 
-    korean_textbook = load_from_disk(args.data_path)
+    korean_textbook = load_from_disk(args.data_path).select(range(100))
+    korean_textbook = korean_textbook.to_pandas()
+    korean_textbook['id'] = list(range(len(korean_textbook)))
 
     database = MilvusDatabase(args.db_path, 
                               args.collection_name, 
@@ -87,9 +55,8 @@ def main():
         database.drop_collection()
         database.set_collection()
     
-    get_embedding(model, korean_textbook, database, 
-                  args.collection_name, args.batch_size)
-
+    korean_textbook = embedding_text(model, korean_textbook, args.batch_size)    
+    database.insert_data(args.collection_name, korean_textbook)
 
 if __name__=="__main__":
     main()
