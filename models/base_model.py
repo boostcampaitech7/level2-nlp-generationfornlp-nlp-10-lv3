@@ -118,6 +118,30 @@ class BaseModel:
         
         return generated_infer_results
 
+    def inference_vllm(self, test_dataset):
+        infer_results = []
+        pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
+        # self.model.eval()
+        # test_dataset : Not Tokenized Dataset
+        # apply_chat_template
+        
+        with torch.inference_mode():
+            for idx in tqdm(range(len(test_dataset))):
+                # Tokenizing
+                _id = test_dataset[idx]['id']
+                messages = test_dataset[idx]["messages"]
+                len_choices = test_dataset[idx]["len_choices"]
+
+                tokenized = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=True,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                ).to(self.device)
+
+                print(self.tokenizer.decode(tokenized[0], skip_special_tokens=False))
+                
+                        
 
     def inference(self, test_dataset):
         infer_results = []

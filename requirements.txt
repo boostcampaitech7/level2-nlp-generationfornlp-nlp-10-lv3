@@ -10,3 +10,4 @@ peft
 wandb
 load_dotenv
 python-box
+pymilvus
