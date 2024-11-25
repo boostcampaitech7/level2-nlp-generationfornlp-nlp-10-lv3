@@ -5,7 +5,7 @@ import random
 
 # 외부 라이브러리
 import pandas as pd
-
+import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 # 로컬 모듈
@@ -31,7 +31,7 @@ def main() :
                         help="")
 
     args = parser.parse_args() 
-
+    print("Config Path :",args.config_path) # Check Config path
     configs = load_config(args.config_path)
 
     set_seed(configs.seed)
@@ -42,7 +42,7 @@ def main() :
         torch_dtype=torch.float16,
         device_map="auto"
     )
-    
+    print("Train Model Name :", configs.train_model_path_or_name) # Check Configs model name
 
     tokenizer = AutoTokenizer.from_pretrained(
         configs.train_model_path_or_name,
