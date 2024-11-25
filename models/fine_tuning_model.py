@@ -1,4 +1,5 @@
 # 표준 라이브러리
+import os
 import torch
 from tqdm import tqdm
 
@@ -6,10 +7,10 @@ from tqdm import tqdm
 import pandas as pd
 import numpy as np
 from transformers import (
-    AutoModelForCausalLM, 
+    AutoModelForCausalLM,
     TrainingArguments, Trainer,
 )
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, AutoPeftModelForCausalLM
 from sklearn.metrics import accuracy_score, f1_score
 
 # 로컬 모듈
@@ -23,12 +24,6 @@ class FineTuningModel:
 
         self.tokenizer = tokenizer
         
-        self.model = AutoModelForCausalLM.from_pretrained(
-            configs.ft_model_path_or_name,
-            torch_dtype = torch.float16,
-            trust_remote_code=True,
-        )
-        
         self.lora_config = LoraConfig(
             r = configs.lora_rank,
             lora_alpha = configs.lora_alpha,
@@ -38,13 +33,24 @@ class FineTuningModel:
             task_type = configs.lora_task_type,
         )
         
-        if configs.use_lora:
+        if configs.do_train :
+            self.model = AutoModelForCausalLM.from_pretrained(
+                configs.ft_model_path_or_name,
+                torch_dtype = torch.float16,
+                trust_remote_code=True,
+            )
             self.model = get_peft_model(self.model, self.lora_config)
-        
+        else :
+            self.model = AutoPeftModelForCausalLM.from_pretrained(
+                configs.ft_model_path_or_name,
+                torch_dtype = torch.float16,
+                trust_remote_code=True,
+            )
         self.model.to(self.device)
 
+        output_dir = os.path.join(configs.output_dir, configs.ft_model_path_or_name)
         self.training_args = TrainingArguments(
-            output_dir = f"../saved/fine_tuning/{configs.ft_model_path_or_name}",
+            output_dir = output_dir,
             # eval_strategy = "steps",
             # save_strategy = "steps",
             # eval_steps=configs.steps,
@@ -52,6 +58,8 @@ class FineTuningModel:
             save_strategy = "epoch",
             eval_strategy = "epoch",
             load_best_model_at_end=True,
+            metric_for_best_model="accuracy",
+            greater_is_better=True,
             # eval_strategy = "no",
             # load_best_model_at_end=False,
             save_total_limit = configs.save_total_limit,
@@ -102,12 +110,12 @@ class FineTuningModel:
                 outputs[0],
                 skip_special_tokens=True,
             )
-            predicted_answer  = extract_answer(generated_text)
+            generated_text  = extract_answer(generated_text)
 
             # 원본 정답 가져오기
             true_answer = data['answer']
             # 정답 저장
-            predictions.append(predicted_answer)
+            predictions.append(generated_text)
             references.append(true_answer)
 
             question.append(data['question'])
