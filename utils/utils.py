@@ -26,3 +26,13 @@ def set_seed(random_seed):
     torch.backends.cudnn.benchmark = False
     np.random.seed(random_seed)
     random.seed(random_seed)
+
+
+def extract_answer(text):
+    if "정답:" in text:
+        # "정답:" 뒤의 텍스트 추출
+        answer_part = text.split("정답:")[1].strip()
+        # 개행 문자나 "설명:" 등으로 끝나는 부분까지 제거
+        answer = answer_part.split("\n")[0]
+        return answer
+    return ""
