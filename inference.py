@@ -19,12 +19,13 @@ def main() :
                         help="")
 
     args = parser.parse_args() 
-
+    print("Config Path :",args.config_path) # Check Config path
+    
     configs = load_config(args.config_path)
-
     set_seed(configs.seed) 
 
     test_model_path_or_name = os.path.join("./saved/models", configs.test_model_path_or_name)
+    print("Inference Model Name :", configs.test_model_path_or_name) # Check Configs model name
 
     model = AutoPeftModelForCausalLM.from_pretrained(
         test_model_path_or_name,
@@ -45,9 +46,9 @@ def main() :
 
     test_dataset = BaseDataset(test_data, tokenizer, configs, False)
     
-    model = BaseModel(configs, tokenizer, model)
+    model = BaseModel(configs, tokenizer, model=None)
 
-    outputs, decoder_output = model.inference(test_dataset)
+    outputs, decoder_output = model.inference_vllm(test_dataset)
 
     os.makedirs("./saved/outputs", exist_ok=True)
     pd.DataFrame(outputs).to_csv(os.path.join("./saved/outputs", configs.output_file), index=False)
