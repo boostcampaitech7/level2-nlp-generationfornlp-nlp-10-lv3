@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+import torch
 
 from milvus_database import MilvusDatabase
 import logging
@@ -17,7 +18,7 @@ hf_api_key = os.getenv('HF_API_KEY')
 
 def embedding_text(model, datasets):
 
-    batch_size = 32
+    batch_size = 128
     
     embeddings_list = []
 
@@ -26,11 +27,14 @@ def embedding_text(model, datasets):
         batch_texts = datasets['text'].iloc[i:i + batch_size].tolist()
         batch_embeddings = model.encode(batch_texts, show_progress_bar=False)  # 각 배치에 대해 embedding 수행
         embeddings_list.extend(batch_embeddings)  # 결과를 리스트에 추가
+        # print(batch_embeddings.dtype)
+        torch.cuda.empty_cache()
 
     datasets["emb"] = embeddings_list
+    print(datasets.shape)
     return datasets
 
-def wiki_dataset(dataset_name):
+def wiki_dataset(dataset_name): 
 
     print("Load Dataset :",dataset_name)
     dataset = load_dataset(dataset_name, split="train")
@@ -38,9 +42,9 @@ def wiki_dataset(dataset_name):
     # id, title, text만 가져감
     df = dataset.to_pandas()
     df = df[["id","title","text"]]
-    
-    # 전체 데이터를 다 사용할거임 -> 어차피 512 토큰으로 짤림
+    df = df[df['text'].str.len() < 2024] # 2024자 이상인경우 삭제
     print("Dataset Shape :",df.shape)
+    print(df.head())
 
     return df
 
@@ -49,11 +53,14 @@ if __name__=="__main__":
 
     model_name = "dragonkue/BGE-m3-ko" # max_seq_length = 8192
     dataset_name = "Cohere/wikipedia-22-12-ko-embeddings" # wiki Data
-    db_path = "../../milvus/milvus_rag.db"
+    db_path = "../../milvus/milvus_rag2.db"
     collection_name = "wiki_collection"
     
     # Load Model, Dataset, Milvus
-    model = SentenceTransformer(model_name) # embedding model
+    model = SentenceTransformer(model_name,
+                                model_kwargs={
+                                    "torch_dtype":torch.float16
+                                }) # embedding model
     datasets = wiki_dataset(dataset_name)
 
     # Embedding
@@ -64,3 +71,4 @@ if __name__=="__main__":
     database.drop_collection() # 기존에 존재하면 삭제
     database.set_collection()
     database.insert_data(collection_name, datasets)
+    print(database.describe())

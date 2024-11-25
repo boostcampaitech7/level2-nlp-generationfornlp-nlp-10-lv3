@@ -21,30 +21,28 @@ class RAG:
             collection_name=self.collection_name
         )
         
-    def describe_milvus(self):
+    def describe_milvus(self, db_name):
         client = MilvusClient(
-            uri="../../milvus/milvus_rag.db"
+            uri=db_name
         )
         print(client.describe_collection("wiki_collection"))
 
     def search(self, query):
         print(query)
-        results = self.vector_store.similarity_search(query, k=5)
-        print(results)
-        for result in results:
-            print(f"Document: {result.page_content}, Score: {result.score}")
+        results = self.vector_store.similarity_search_with_score(query, k=5)
+        for result, score in results:
+            print(f"Document: {result.page_content}, Score: {score}")
         
 if __name__=="__main__":
     
     # config
     model_name = "dragonkue/BGE-m3-ko" # max_seq_length = 8192
     collection_name = "wiki_collection"
-    db_name = "../../milvus/milvus_rag.db"
+    db_name = "../../milvus/milvus_rag2.db"
 
     # Retrieval
     retrieval = RAG(model_name, collection_name, db_name)
 
-    query = "5.18 민주화운동이 뭐야?"
+    query = "5.18 민주화 운동은 어디서 일어났어?"
 
-    # retrieval.search(query)
-    retrieval.describe_milvus()
+    retrieval.search(query)

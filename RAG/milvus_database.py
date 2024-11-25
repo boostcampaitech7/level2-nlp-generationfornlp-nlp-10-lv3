@@ -26,7 +26,7 @@ class MilvusDatabase:
         fields = [
             FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
             FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=6000, description="raw Text"),
-            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=self.embedding_dim, description="vector")
+            FieldSchema(name="vector", dtype=DataType.FLOAT_VECTOR, dim=self.embedding_dim, description="vector")
         ]
         schema = CollectionSchema(fields=fields, auto_id=True, description="Rag schema")
         return schema
@@ -35,9 +35,9 @@ class MilvusDatabase:
         index_params = self.milvus_client.prepare_index_params()
 
         index_params.add_index(
-            field_name="embedding",
+            field_name="vector",
             index_type="FLAT",
-            metric_type="IP"
+            metric_type="COSINE"
         )
         return index_params    
     
@@ -50,7 +50,7 @@ class MilvusDatabase:
             vector = np.array(row["emb"], dtype=np.float32)
             data = {
                 "text": row["text"],
-                "embedding": vector,
+                "vector": vector,
             }
             
             self.milvus_client.insert(collection_name=collection_name,
