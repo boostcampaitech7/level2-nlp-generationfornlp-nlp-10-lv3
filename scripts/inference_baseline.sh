@@ -1,4 +1,3 @@
 #!/bin/bash
 
-export PYTHONPATH=$PYTHONPATH:.
-python ./inference.py --config_path "./configs/baseline.yaml"
+python ./inference.py --config_path "./configs/exaone_prompting_step.yaml"

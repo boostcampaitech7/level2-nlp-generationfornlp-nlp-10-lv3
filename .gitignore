@@ -2,3 +2,5 @@ data/*
 saved/*
 __pycache__
 wandb/*
+.env
+baseline_code.ipynb

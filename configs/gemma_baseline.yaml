@@ -1,29 +1,25 @@
-# seed
-seed: 
-  42
-
 # wandb
 project:
-  "DongHyeok"
+  "LeeJeonge"
 sub_project:
-  "gemma1_base_v0data ver."
+  "Gemma_2_finetuning_CoT"
 
 # data path
 data_dir:
   "./data" 
 train_path:
-  "v0.1.6/train_v0.1.6.csv"
+  "v1/re_train.csv"
 val_path:
-  "val_v0.1.6.csv"
+  "v1/validation.csv"
 output_file:
   "inference_results.csv"
 
-# for filtering dataset & setting model's max_length
+# dataset
 max_length:
   2048
 
 # data collector
-response_template:
+response_template: # Model이 답할 부분에 대한 템플릿 시작
   "<start_of_turn>model"
 
 # tokenizer
@@ -32,30 +28,34 @@ padding_side:
 
 # model
 train_model_path_or_name: 
-  "beomi/gemma-ko-2b"
-  #"meta-llama/Llama-3.2-1B"
+  " "
 test_model_path_or_name:
-  "beomi/gemma-ko-2b/checkpoint-5172"
-  #"meta-llama/Llama-3.2-1B/checkpoint-5484"
+  "google/gemma-2-2b-it/checkpoint-5484"
+
 # SFT
 num_train_epochs: 3
-learning_rate: 0.00002
+learning_rate: 0.00001
 weight_decay: 0.01
 logging_steps: 100
-save_total_limit : 1
+save_total_limit : 2
 
 # LoRa
-rank: 4
+rank: 6
 lora_alpha: 16
-lora_dropout : 0.1
+lora_dropout : 0.05
 target_modules: 
-  - "q_proj"
+  - "q_proj"  
   - "k_proj"
 bias : "none"
 task_type : "CAUSAL_LM"
 
 # prompt
 PROMPT_NO_QUESTION_PLUS: >
+  1. 지문을 읽고 핵심 내용을 요약합니다.
+  2. 질문을 분석하여 무엇을 묻는지 파악합니다.
+  3. 선택지를 하나씩 평가하고, 지문과 질문과 가장 관련이 있는 선택지를 결정합니다.
+  4. 선택지를 결정한 이유를 설명하고 정답을 출력하세요.
+
   지문:
   {paragraph}
 
@@ -66,9 +66,15 @@ PROMPT_NO_QUESTION_PLUS: >
   {choices}
 
   1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  이유:
   정답:
 
 PROMPT_QUESTION_PLUS: >
+  1. 지문을 읽고 핵심 내용을 요약합니다.
+  2. 질문을 분석하여 무엇을 묻는지 파악합니다.
+  3. 선택지를 하나씩 평가하고, 지문과 질문과 가장 관련이 있는 선택지를 결정합니다.
+  4. 선택지를 결정한 이유를 설명하고 정답을 출력하세요.
+
   지문:
   {paragraph}
 
@@ -82,9 +88,9 @@ PROMPT_QUESTION_PLUS: >
   {choices}
 
   1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  이유:
   정답:
 
-# tokenizer의 기본 template을 사용하고 싶다면 null로 표시해주세요.
 chat_template: >
   {% if messages[0]['role'] == 'system' %}
   {% set system_message = messages[0]['content'] %}
