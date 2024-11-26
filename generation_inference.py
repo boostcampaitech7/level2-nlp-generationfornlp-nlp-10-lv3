@@ -24,11 +24,12 @@ def main(arg):
 
     ## data loading
     BASE_DIR = os.getcwd()
-    DATA_DIR = os.path.join(BASE_DIR, "../../data", DATA_VER)
+    BASE_TO_DATA = os.path.join("..", "..", "data")
+    DATA_DIR = os.path.join(BASE_DIR, BASE_TO_DATA, DATA_VER)
     df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"))
     
     ## prompt template loading
-    PROMPT_DIR = os.path.join(BASE_DIR, "chat_template.yaml")
+    PROMPT_DIR = os.path.join(BASE_DIR, "configs", "chat_template.yaml")
     with open(PROMPT_DIR, 'r') as f:
         template = f.read()
     template = [(message["role"], message["content"]) for message in template["messages"]]
