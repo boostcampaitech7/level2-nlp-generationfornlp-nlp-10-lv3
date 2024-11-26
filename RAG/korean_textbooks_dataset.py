@@ -28,27 +28,19 @@ def main():
     ]
 
     # train, validation, test 모두 병합
-    all_train_data = []
-    # all_validation_data = []
-    # all_test_data = []
+    all_text_data = []
 
     for config in configs:
         dataset = load_dataset('maywell/korean_textbooks', config)
         if 'train' in dataset:
-            all_train_data.append(dataset['train'])
-        # All configs have no validation and no tests. 
-        # if 'validation' in dataset:
-        #     all_validation_data.append(dataset['validation'])
-        # if 'test' in dataset:
-        #     all_test_data.append(dataset['test'])
+            try:
+                all_text_data.extend(dataset['train']['text'])
+            except:
+                all_text_data.extend(dataset['train']['0'])
 
-    # 각각 병합
-    train_dataset = concatenate_datasets(all_train_data) if all_train_data else None
-    # validation_dataset = concatenate_datasets(all_validation_data) if all_validation_data else None
-    # test_dataset = concatenate_datasets(all_test_data) if all_test_data else None
-
-    korean_textbook = {'text':train_dataset['text'], 'id': list(range(len(train_dataset['text'])))}
-    korean_textbook = Dataset.from_dict(korean_textbook)
+    dataset = {'text': all_text_data,
+               'id' : list(range(len(all_text_data)))}
+    korean_textbook = Dataset.from_dict(dataset)
 
     korean_textbook.save_to_disk(args.save_path)
     print(f"Korean textbooks savd in {args.save_path}")

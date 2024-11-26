@@ -5,20 +5,24 @@ from transformers import AutoConfig
 from tqdm import tqdm
 from milvus_database import MilvusDatabase
 import numpy as np
+import pandas as pd 
 
-
-def embedding_text(model, datasets, batch_size):
-    embeddings_list = []
+def embedding_text_save_db(model, datasets, batch_size,
+                   database, collection_name, start_idx=0):
 
     # 데이터를 batch_size로 나눕니다.
-    for i in tqdm(range(0, len(datasets), batch_size), desc="Embedding batches"):
-        batch_texts = datasets['text'].iloc[i:i + batch_size].tolist()
+    for i in tqdm(range(start_idx, len(datasets), batch_size), desc="Embedding batches"):
+        batch_texts = datasets[i:i+batch_size]['text']
         batch_embeddings = model.encode(batch_texts, show_progress_bar=False)  # 각 배치에 대해 embedding 수행
-        embeddings_list.extend(batch_embeddings)  # 결과를 리스트에 추가
 
-    datasets["emb"] = embeddings_list
-    return datasets
-
+        data = pd.DataFrame({
+            'id' : datasets[i:i+batch_size]['id'],
+            'text': batch_texts,
+            'emb' : batch_embeddings.tolist()
+        })
+            
+        database.insert_data(collection_name, data)
+        print(f"{i // batch_size}th batch saved.")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -33,7 +37,7 @@ def main():
                         default="korean_textbooks",
                         help="")
     parser.add_argument("--batch_size", type=int,
-                        default=512,
+                        default=128,
                         help="")
     parser.add_argument("--drop_collection", type=bool,
                         default=True,
@@ -44,19 +48,19 @@ def main():
     model = SentenceTransformer(args.model_name, device="cuda")
     embed_dim = model_config.hidden_size
 
-    korean_textbook = load_from_disk(args.data_path).select(range(100))
-    korean_textbook = korean_textbook.to_pandas()
-    korean_textbook['id'] = list(range(len(korean_textbook)))
+    korean_textbook = load_from_disk(args.data_path)
 
     database = MilvusDatabase(args.db_path, 
                               args.collection_name, 
-                              embed_dim)
+                              embed_dim,
+                              False)
     if args.drop_collection:
         database.drop_collection()
         database.set_collection()
     
-    korean_textbook = embedding_text(model, korean_textbook, args.batch_size)    
-    database.insert_data(args.collection_name, korean_textbook)
+    korean_textbook = embedding_text_save_db(model, korean_textbook, args.batch_size,
+                                             database, args.collection_name)    
+    # database.insert_data(args.collection_name, korean_textbook)
 
 if __name__=="__main__":
     main()
