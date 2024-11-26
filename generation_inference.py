@@ -4,7 +4,7 @@ import argparse
 from collections import Counter
 
 import pandas as pd
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
 from tqdm import tqdm
@@ -28,9 +28,10 @@ def main(arg):
     df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"))
     
     ## prompt template loading
-    PROMPT_DIR = os.path.join(BASE_DIR, "prompts")
-    with open(os.path.join(PROMPT_DIR, "prompt_llama.txt"), "r") as f:
+    PROMPT_DIR = os.path.join(BASE_DIR, "chat_template.yaml")
+    with open(PROMPT_DIR, 'r') as f:
         template = f.read()
+    template = [(message["role"], message["content"]) for message in template["messages"]]
 
     ## model loading
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
@@ -48,7 +49,7 @@ def main(arg):
     llm = HuggingFacePipeline(pipeline=pipe)
     llm = ChatHuggingFace(llm=llm)
 
-    prompt = PromptTemplate.from_template(template)
+    prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | llm.bind(stop=[r"\n"]) | StrOutputParser()
 
     ## inference
