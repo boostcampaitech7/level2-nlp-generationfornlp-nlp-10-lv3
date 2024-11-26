@@ -5,8 +5,12 @@ from ast import literal_eval
 import pandas as pd
 import torch
 from datasets import Dataset
-import deepl # 번역을 위함
+#import deepl # 번역을 위함
+from deep_translator import GoogleTranslator
+"""
+pip install deep-translatorpip
 
+"""
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, data,
                  tokenizer, configs, do_train = True):
@@ -92,7 +96,7 @@ class BaseDataset(torch.utils.data.Dataset):
         processed_dataset = []
 
         system_prompt = "chose an answer number from reading paragraph and question"
-
+        num = 0
         for i, row in dataset.iterrows():
             choices_string = "\n".join([f"{idx + 1} - {choice}" for idx, choice in enumerate(row["choices"])])
 
@@ -115,11 +119,29 @@ class BaseDataset(torch.utils.data.Dataset):
                     choices=choices_string,
                 )
             
-            #EN으로 번역
-            auth_key = "0bf96e91-bb7b-4661-99ce-25e3c5ff7e83:fx"
-            translator = deepl.Translator(auth_key)
-            user_message_english = translator.translate_text(user_message, source_lang="KO", target_lang="EN-US")
+            #deepL EN으로 번역
+            # auth_key = "0bf96e91-bb7b-4661-99ce-25e3c5ff7e83:fx"
+            # translator = deepl.Translator(auth_key)
+            # user_message_english = translator.translate_text(user_message, source_lang="KO", target_lang="EN-US")
             
+            index = 2000
+            
+            # 너무 길어서 번역기가 처리 못할 시 절반 씩 처리하여 합하기.
+            if len(user_message)>= index :
+                while index > 0 and user_message[index - 1] != " ":
+                    index -= 1
+                print(f"Length: {len(user_message)}")
+                user_message1 = user_message[:index]
+                user_message2 = user_message[index:]
+                num = num + 1
+                print(f"ok : {index}")
+                print(num)
+                user_message_english1 = GoogleTranslator(source="ko", target="en").translate(user_message1) 
+                user_message_english2 = GoogleTranslator(source="ko", target="en").translate(user_message2)
+                user_message_english = user_message_english1 + user_message_english2
+                
+            else : 
+                user_message_english = GoogleTranslator(source="ko", target="en").translate(user_message)
             # chat message 형식으로 변환
             if self.do_train:
                 processed_dataset.append(
@@ -127,7 +149,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         "id": row["id"],
                         "messages": [
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_message_english.text},
+                            {"role": "user", "content": user_message_english},
                             {"role": "assistant", "content": f"{row['answer']}"}
                         ],
                         "label": row["answer"],
@@ -139,7 +161,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         "id": row["id"],
                         "messages": [
                             {"role": "system", "content": system_prompt},
-                            {"role": "user", "content": user_message_english.text},
+                            {"role": "user", "content": user_message_english},
                         ],
                         "len_choices": len_choices,
                     }
