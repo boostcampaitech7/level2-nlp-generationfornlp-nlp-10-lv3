@@ -3,7 +3,9 @@ import re
 import argparse
 from collections import Counter
 
+import yaml
 import pandas as pd
+from ast import literal_eval
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
@@ -26,32 +28,52 @@ def main(arg):
     BASE_DIR = os.getcwd()
     BASE_TO_DATA = os.path.join("..", "..", "data")
     DATA_DIR = os.path.join(BASE_DIR, BASE_TO_DATA, DATA_VER)
-    df = pd.read_csv(os.path.join(DATA_DIR, "train.csv"))
+    df = pd.read_csv(os.path.join(DATA_DIR, "train_v0.1.6.csv"))
+
+    records = []
+    for _, row in df.iterrows():
+        problems = literal_eval(row['problems'])
+        record = {
+            'id': row['id'],
+            'paragraph': row['paragraph'],
+            'question': problems['question'],
+            'choices': problems['choices'],
+            'answer': problems.get('answer', None),
+            "question_plus": problems.get('question_plus', None),
+        }
+        # Include 'question_plus' if it exists
+        if 'question_plus' in problems:
+            record['question_plus'] = problems['question_plus']
+        records.append(record)
+    
+    df = pd.DataFrame(records)
+    df['question_plus'] = df['question_plus'].fillna('')
+    df['full_question'] = df.apply(lambda x: x['question'] + ' ' + x['question_plus'] if x['question_plus'] else x['question'], axis=1)
     
     ## prompt template loading
     PROMPT_DIR = os.path.join(BASE_DIR, "configs", "chat_template.yaml")
     with open(PROMPT_DIR, 'r') as f:
-        template = f.read()
-    template = [(message["role"], message["content"]) for message in template["messages"]]
+        template = yaml.load(f, Loader=yaml.SafeLoader)
+    template = [tup for message in template for tup in message.items()]
 
     ## model loading
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_ID)
+    model = AutoModelForCausalLM.from_pretrained(MODEL_ID, trust_remote_code=True)
 
     ## pipline constructing
     pipe = pipeline(
         "text-generation",
         model=model,
         tokenizer=tokenizer,
-        max_new_tokens=256,
+        max_new_tokens=500,
         device=0,
         batch_size=1
     )
     llm = HuggingFacePipeline(pipeline=pipe)
     llm = ChatHuggingFace(llm=llm)
 
-    prompt = ChatPromptTemplate.from_template(template)
-    chain = prompt | llm.bind(stop=[r"\n"]) | StrOutputParser()
+    prompt = ChatPromptTemplate.from_messages(template)
+    chain = prompt | llm | StrOutputParser()
 
     ## inference
     outputs = []
@@ -80,7 +102,7 @@ if __name__ == "__main__":
     args.add_argument(
         "-s",
         "--seed",
-        default=456,
+        default=42,
         type=int,
         help="setting random seed (default: 456)",
     )
