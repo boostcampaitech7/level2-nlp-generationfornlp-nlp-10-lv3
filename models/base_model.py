@@ -22,9 +22,9 @@ class BaseModel:
         
         self.model = model
         self.tokenizer = tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-        tokenizer.special_tokens_map
+        # tokenizer.pad_token = tokenizer.eos_token
+        # tokenizer.pad_token_id = tokenizer.eos_token_id
+        # tokenizer.special_tokens_map
         tokenizer.padding_side = configs.padding_side
 
         self.data_collator = DataCollatorForCompletionOnlyLM(
@@ -79,11 +79,6 @@ class BaseModel:
 
         self.trainer.train()
 
-    def eval(self, eval_dataset):
-        pass 
-
-        return # 데이터 프레임 (판다스)
-
     def inference_generate(self, test_dataset): # 현재 작동 X
         # test_datsaet은 Tokenized가 된 데이터셋이 아님
         generated_infer_results = []
@@ -94,7 +89,6 @@ class BaseModel:
             for idx in tqdm(range(len(test_dataset))):
                 _id = test_dataset[idx]['id']
                 messages = test_dataset[idx]["messages"]
-                len_choices = test_dataset[idx]["len_choices"]
 
                 inputs = self.tokenizer.apply_chat_template(
                     messages,
@@ -105,16 +99,14 @@ class BaseModel:
                 
                 outputs = self.model.generate(
                     inputs,
-                    max_new_tokens=2,
+                    max_new_tokens=512,
                     pad_token_id=self.tokenizer.pad_token_id
                 )
-
                 generate_text = self.tokenizer.batch_decode(
-                    outputs[:, inputs.input_ids.shape[1]:], skip_special_tokens=True
+                    outputs[:, inputs.shape[1]:], skip_special_tokens=True
                 )[0]
-                print(generate_text)
-                generate_text.strip()
-                generated_infer_results.append({"id":idx, "target":generate_text})
+                generate_text = generate_text.strip()
+                generated_infer_results.append({"id":_id, "target":generate_text})
         
         return generated_infer_results
 
@@ -140,16 +132,14 @@ class BaseModel:
                 ).to(self.device)
 
                 print(self.tokenizer.decode(tokenized[0], skip_special_tokens=False))
-                
-                        
-
+            
     def inference(self, test_dataset):
         infer_results = []
         decoded_results = []
 
         pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
         self.model.eval()
-
+        print(test_dataset)
         with torch.inference_mode():
             for idx in tqdm(range(len(test_dataset))):
                 _id = test_dataset[idx]['id']

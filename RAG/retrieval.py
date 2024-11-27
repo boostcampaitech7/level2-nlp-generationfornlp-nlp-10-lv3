@@ -1,9 +1,9 @@
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_milvus import Milvus
-from sentence_transformers import SentenceTransformer
 from pymilvus import MilvusClient
+import torch
 
-class RAG:
+class Retrieval:
     def __init__(self, model_name, collection_name, db_name):
         self.model_name = model_name
         self.collection_name = collection_name
@@ -28,11 +28,12 @@ class RAG:
         print(client.describe_collection("wiki_collection"))
 
     def search(self, query):
-        print(query)
-        results = self.vector_store.similarity_search_with_score(query, k=5)
-        for result, score in results:
-            print(f"Document: {result.page_content}, Score: {score}")
-        
+        with torch.no_grad():
+            results = self.vector_store.similarity_search_with_score(query, k=1)
+            # for result, score in results:
+        #     print(f"Document: {result.page_content}, Score: {score}")
+        return results
+
 if __name__=="__main__":
     
     # config
@@ -41,7 +42,7 @@ if __name__=="__main__":
     db_name = "../../milvus/milvus_rag2.db"
 
     # Retrieval
-    retrieval = RAG(model_name, collection_name, db_name)
+    retrieval = Retrieval(model_name, collection_name, db_name)
 
     query = "5.18 민주화 운동은 어디서 일어났어?"
 
