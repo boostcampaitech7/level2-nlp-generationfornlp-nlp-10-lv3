@@ -89,8 +89,13 @@ def main(arg):
             )
 
             ## answer extraction in prompt
-            answer = answer.split("\n").pop()
-            rep_out.append(answer) ## parsing하고 넣어야 함
+            answer = answer.split("[|assistant|]").pop()
+            answer = re.findall(r"정답\s*:\s*[1-5]", answer)
+            if answer:
+                answer = answer[0][-1]
+            else:
+                answer = 3 ## 정답 못 찾으면 3번으로 찍기
+            rep_out.append(answer)
 
         majority = Counter(rep_out)
         majority = list(sorted(majority.item(), key=lambda x: x[1]))
