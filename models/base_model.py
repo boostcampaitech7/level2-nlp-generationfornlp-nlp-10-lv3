@@ -6,12 +6,13 @@ import pandas as pd
 # 외부 라이브러리
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, pipeline
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
 from peft import LoraConfig, AutoPeftModelForCausalLM
 
 # 로컬 모듈
 from utils.metrics import preprocess_logits_for_metrics, compute_metrics
+from utils.utils import extract_answer
 
 
 class BaseModel:
@@ -22,9 +23,8 @@ class BaseModel:
         
         self.model = model
         self.tokenizer = tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-        tokenizer.special_tokens_map
+        # tokenizer.pad_token = tokenizer.eos_token
+        # tokenizer.pad_token_id = tokenizer.eos_token_id
         tokenizer.padding_side = configs.padding_side
 
         self.data_collator = DataCollatorForCompletionOnlyLM(
@@ -83,6 +83,41 @@ class BaseModel:
         pass 
 
         return # 데이터 프레임 (판다스)
+    
+    def inference_pipeline(self, test_dataset):
+        pipe = pipeline(
+            "text-generation",
+            model=self.model,
+            tokenizer=self.tokenizer,
+            # torch_dtype=torch.float16,
+            # device="cuda",
+            do_sample=True,
+            top_k=10,
+            max_new_tokens=1,
+            return_full_text = False,   
+        )
+        id_list = []
+        generate_text_list = []
+        for idx in tqdm(range(len(test_dataset)), desc="Generating answer"):
+            _id = test_dataset[idx]['id']
+
+            input_texts = self.tokenizer.apply_chat_template(
+                test_dataset[idx]['messages'],
+                tokenize=False,
+            )
+
+            output = pipe(input_texts)
+            output_text = output[0]['generated_text']
+
+            id_list.append(_id)
+            generate_text_list.append(extract_answer(output_text))
+        
+        return {
+            'id': id_list,
+            'answer': generate_text_list,
+        }
+
+
 
     def inference_generate(self, test_dataset): # 현재 작동 X
         # test_datsaet은 Tokenized가 된 데이터셋이 아님

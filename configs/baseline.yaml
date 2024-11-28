@@ -54,15 +54,15 @@ bias : "none"
 task_type : "CAUSAL_LM"
 
 # prompt
+SYSTEM_PROMPT:
+  "지문을 읽고 질문의 답을 구하세요."
 PROMPT_NO_QUESTION_PLUS: >
   지문:
   {paragraph}
 
-  질문:
-  {question}
+  질문: {question}
 
-  선택지:
-  {choices}
+  선택지: {choices}
 
   1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
   정답:
@@ -71,14 +71,12 @@ PROMPT_QUESTION_PLUS: >
   지문:
   {paragraph}
 
-  질문:
-  {question}
+  질문: {question}
 
   <보기>:
   {question_plus}
 
-  선택지:
-  {choices}
+  선택지: {choices}
 
   1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
   정답:
@@ -99,3 +97,49 @@ chat_template: >
   {{ content + '<end_of_turn>\n' }}
   {% endif %}
   {% endfor %}
+
+# RAG
+database_path:
+  "/data/ephemeral/home/data/v3/milvus_vector_db.db"
+collection_name:
+  "korean_textbooks"
+rag_model_path_or_name: "dragonkue/bge-m3-ko"
+rag_flag: 1000
+top_k: 5
+use_k:
+  - 1
+rewrite_prefix: 
+  "다음 정보를 바탕으로, 질문의 의도를 명확히 하여 검색에 적합한 질문을 작성하세요."
+rewrite_model:
+  'eenzeenee/t5-base-korean-summarization'
+  
+RAG_PROMPT_NO_QUESTION_PLUS: >
+  지문:
+  {paragraph}
+
+  질문: {question}
+
+  선택지: {choices}
+
+  힌트:
+  {hint}
+
+  1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  정답:
+
+RAG_PROMPT_QUESTION_PLUS: >
+  지문:
+  {paragraph}
+
+  질문: {question}
+
+  <보기>:
+  {question_plus}
+
+  선택지: {choices}
+
+  힌트:
+  {hint}
+
+  1, 2, 3, 4, 5 중에 하나를 정답으로 고르세요.
+  정답:

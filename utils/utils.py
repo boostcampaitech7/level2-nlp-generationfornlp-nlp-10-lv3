@@ -26,3 +26,10 @@ def set_seed(random_seed):
     torch.backends.cudnn.benchmark = False
     np.random.seed(random_seed)
     random.seed(random_seed)
+
+def extract_answer(text):
+    try:
+        answer = int(text)
+    except:
+        answer = "0" # random.randint(1, 5)
+    return answer
