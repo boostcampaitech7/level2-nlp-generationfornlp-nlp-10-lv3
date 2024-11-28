@@ -140,7 +140,11 @@ class BaseDataset(torch.utils.data.Dataset):
                         "len_choices": len_choices,
                     }
                 )
-        return Dataset.from_pandas(pd.DataFrame(processed_dataset)) 
+        processed_dataset = pd.DataFrame(processed_dataset)
+        # inference시에 해당부분 주석
+        processed_dataset['label'] = processed_dataset['label'].astype(int)
+        
+        return Dataset.from_pandas(processed_dataset)
 
 
 class FineTuningDataset(torch.utils.data.Dataset):
