@@ -2,6 +2,7 @@ import os
 import yaml
 import json
 import time
+import argparse
 from dotenv import load_dotenv
 
 from box import Box
@@ -73,6 +74,7 @@ def main(arg):
                         {"role": "system", "content": sys_prompt},
                         {"role": "user", "content": usr_prompt}
                     ],
+                    ## hard coding 수정 해야함
                     'max_tokens': 500,
                     'temperature': 0,
                     'top_p': 1,
@@ -150,3 +152,23 @@ def main(arg):
     train.to_csv(os.path.join(DATA_DIR,"reasoning_train.csv"), index=False)
     valid.to_csv(os.path.join(DATA_DIR,"reasoning_valid.csv"), index=False)
     print("All datasets are saved into train and valid")
+
+if __name__ == "__main__":
+    args = argparse.ArgumentParser()
+    args.add_argument(
+        "-s",
+        "--seed",
+        default=42,
+        type=int,
+        help="setting random seed (default: 456)",
+    )
+    args.add_argument(
+        "-d",
+        "--data_dir",
+        default=None,
+        type=str,
+        help="data directory path (default: ../../data/v0)",
+    )
+
+    arg = args.parse_args()
+    main(arg)
