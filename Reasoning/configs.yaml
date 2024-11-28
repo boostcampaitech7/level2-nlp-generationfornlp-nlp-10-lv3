@@ -3,7 +3,7 @@
 - data_dir: ../../data
 - train_path: reasoning_train.csv
 - val_path: reasoning_valid.csv
-- max_new_tokens: 500
+- max_seq_length: 4096
 - num_train_epochs: 2
 - learning_rate: 2.0e-5
 - weight_decay: 0.01
