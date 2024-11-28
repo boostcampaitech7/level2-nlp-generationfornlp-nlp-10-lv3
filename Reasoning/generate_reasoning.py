@@ -165,7 +165,7 @@ if __name__ == "__main__":
     args.add_argument(
         "-d",
         "--data_dir",
-        default=None,
+        default="../../data/v0",
         type=str,
         help="data directory path (default: ../../data/v0)",
     )
