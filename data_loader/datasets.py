@@ -205,3 +205,64 @@ class FineTuningDataset(torch.utils.data.Dataset):
             ]
 
         return inputs
+    
+class ReasoningDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            data,
+            tokenizer,
+            configs,
+            do_train=True,
+    ):
+        self.data = data
+        self.tokenizer = tokenizer
+        self.do_train = do_train
+        self.USER_PROMPT_TEMPLATE = configs.USER_PROMPT
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        paragraph = self.data.loc[idx, "paragraph"]
+        question = self.data.loc[idx, "question"]
+        choices = self.data.loc[idx, "choices"]
+        reason = self.data.loc[idx, "reason"]
+        
+        SYSTEM_PROMPT = self.data.loc[idx, "reason"]
+        USER_PROMPT = self.USER_PROMPT_TEMPLATE.format(
+            paragraph=paragraph,
+            question=question,
+            choices=choices,
+        )
+
+        message = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": USER_PROMPT},
+            {"role": "assistant", "content": reason}
+        ]
+
+        tokenized = self.tokenizer.apply_chat_template(
+            message,
+            tokenize=False,
+        )
+
+        inputs = self.tokenizer(
+            tokenized,
+            truncation=False,
+            padding=False,
+            return_overflowing_tokens=False,
+            return_length=False,
+            # add_special_token=False,
+            return_attention_mask=True,
+        )
+
+        if self.do_train:
+            return {
+                "input_ids": inputs["input_ids"],
+                "attention_mask": inputs["attention_mask"],
+                "labels": inputs["input_ids"].copy(),
+            }
+        return {
+            "input_ids": inputs["input_ids"],
+            "attention_mask": inputs["attention_mask"],
+        }
