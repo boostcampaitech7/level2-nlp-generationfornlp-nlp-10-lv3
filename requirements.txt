@@ -11,3 +11,9 @@ wandb
 load_dotenv
 python-box
 pymilvus
+sentence-transformers
+langchain
+langchain_community
+langchain_milvus
+unsloth
+triton==2.3.0

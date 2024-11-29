@@ -7,6 +7,7 @@ import random
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
+from unsloth import FastLanguageModel
 
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
@@ -48,6 +49,30 @@ def main() :
         configs.train_model_path_or_name,
         trust_remote_code=True,
     )
+
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = "unsloth/Qwen2.5-32B-Instruct-bnb-4bit",
+        max_seq_length = 2048,
+        dtype = torch.float16,
+        load_in_4bit = True,
+        device_map="auto",
+        trust_remote_code=True,   
+    )
+    
+
+    model = FastLanguageModel.get_peft_model(
+        model,
+        r = 16,
+        target_modules = ["q_proj", "k_proj"],
+        lora_alpha = 16,
+        lora_dropout = 0, # Supports any, but = 0 is optimized
+        bias = "none",    # Supports any, but = "none" is optimized
+        # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
+        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
+        random_state = 3407,
+        use_rslora = False,  # We support rank stabilized LoRA
+        loftq_config = None, # And LoftQ
+    )        
 
     if configs.chat_template is not None :
         tokenizer.chat_template = configs.chat_template

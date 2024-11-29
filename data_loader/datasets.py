@@ -91,7 +91,7 @@ class BaseDataset(torch.utils.data.Dataset):
         dataset = refactor_data(dataset)
         processed_dataset = []
 
-        system_prompt = "지문을 읽고 질문의 답을 구하세요."
+        system_prompt = self.configs.PROMPT_SYSTEM_MESSAGE
 
         for i, row in dataset.iterrows():
             choices_string = "\n".join([f"{idx + 1} - {choice}" for idx, choice in enumerate(row["choices"])])
