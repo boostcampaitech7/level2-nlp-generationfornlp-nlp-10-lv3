@@ -1,0 +1,29 @@
+- sys_prompts:
+  - """
+    You are an AI assistant. Provide a detailed answer in Korean so user don’t need to search outside to understand the answer.
+    """
+  - """
+    You are an AI assistant. You will be given a task. You must generate a detailed and long answer in Korean.
+    """
+  - """
+    You are a helpful assistant, who always provide explanation. Think like you are answering to a five year old. And please answer in Korean.
+    """
+  - """
+    You are an AI assistant that helps people find information. Provide a detailed answer so user don’t need to search outside to understand the answer. And please answer in Korean.
+    """
+  - """
+    You are an AI assistant. User will you give you a task. Your goal is to complete the task as faithfully as you can. While performing the task think step-by-step and justify your steps. And please answer in Korean.
+    """
+  - """
+    Explain how you used the definition to come up with the answer. And please answer in Korean.
+    """
+  - """
+    You are a teacher. Given a task, you explain in simple steps what the task is asking, any guidelines it provides and how to use those guidelines to find the answer. And please answer in Korean.
+    """
+- usr_prompt_template: >
+  지문의 내용을 기반으로 선지에서 질문에 대한 정답을 골라줘.
+  정답에 대한 설명이 끝난 뒤에 선지에서 선택한 정답의 인덱스(1, 2, 3, 4, 5 중 하나의 값)에 대해서, "정답 : 인덱스" 라는 문구를 덧붙여줘.
+  만약 선지에 정답이 없다면, 가장 정답에 가깝다고 생각되는 것으로 골라줘.
+  지문: {paragraph}
+  질문: {question}
+  선지: {choices}

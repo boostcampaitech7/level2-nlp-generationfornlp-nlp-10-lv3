@@ -1,5 +1,6 @@
 # 표준 라이브러리
 from ast import literal_eval
+from copy import deepcopy
 
 # 외부 라이브러리
 import pandas as pd
@@ -140,3 +141,128 @@ class BaseDataset(torch.utils.data.Dataset):
                     }
                 )
         return Dataset.from_pandas(pd.DataFrame(processed_dataset)) 
+
+
+class FineTuningDataset(torch.utils.data.Dataset):
+    def __init__(self, data, tokenizer, configs, is_eval=False):
+        self.tokenizer = tokenizer
+        self.configs = configs
+        self.is_eval = is_eval
+
+        # 데이터 전처리를 한 번만 수행
+        self.tokenized_data = data.map(self.preprocess_function, batched=True)
+
+    def __len__(self):
+        return len(self.tokenized_data)
+
+    def __getitem__(self, idx):
+        return self.tokenized_data[idx]
+
+    def preprocess_function(self, examples):
+        if self.is_eval:
+            # 평가 데이터 전처리
+            prompt = "\n질문에 알맞은 선택지를 골라 정답만 출력하세요. \n정답:"
+            inputs = self.tokenizer(
+                ["질문: "+t+"\n선택지: "+c+prompt for t, c in zip(examples["question"], examples['choice'])], # 
+                truncation=True,
+                padding="max_length",
+                max_length=self.configs.max_length,
+            )
+            # 타겟 데이터 전처리
+            with self.tokenizer.as_target_tokenizer():
+                labels = self.tokenizer(
+                    examples["answer"],
+                    truncation=True,
+                    padding="max_length",
+                    max_length=self.configs.max_length,
+                )
+
+            # 패딩 토큰을 -100으로 변경
+            labels["input_ids"] = [
+                [-100 if token == self.tokenizer.pad_token_id else token for token in label]
+                for label in labels["input_ids"]
+            ]
+            inputs["labels"] = labels["input_ids"]
+
+        else:
+            # 학습 데이터 전처리
+            inputs = self.tokenizer(
+                examples["text"],
+                truncation=True,
+                padding="max_length",
+                max_length=self.configs.max_length,
+            )
+
+            # labels 생성 및 한 칸씩 이동
+            inputs["labels"] = deepcopy(inputs["input_ids"])
+            for i in range(len(inputs["labels"])):
+                inputs["labels"][i] = inputs["labels"][i][1:] + [self.tokenizer.pad_token_id]
+
+            # 패딩 토큰을 -100으로 변경
+            inputs["labels"] = [
+                [-100 if token == self.tokenizer.pad_token_id else token for token in label]
+                for label in inputs["labels"]
+            ]
+
+        return inputs
+    
+class ReasoningDataset(torch.utils.data.Dataset):
+    def __init__(
+            self,
+            data,
+            tokenizer,
+            configs,
+            do_train=True,
+    ):
+        self.data = data
+        self.tokenizer = tokenizer
+        self.do_train = do_train
+        self.USER_PROMPT_TEMPLATE = configs.USER_PROMPT
+
+    def __len__(self):
+        return self.data.shape[0]
+
+    def __getitem__(self, idx):
+        paragraph = self.data.loc[idx, "paragraph"]
+        question = self.data.loc[idx, "question"]
+        choices = self.data.loc[idx, "choices"]
+        reason = self.data.loc[idx, "reason"]
+        
+        SYSTEM_PROMPT = self.data.loc[idx, "reason"]
+        USER_PROMPT = self.USER_PROMPT_TEMPLATE.format(
+            paragraph=paragraph,
+            question=question,
+            choices=choices,
+        )
+
+        message = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": USER_PROMPT},
+            {"role": "assistant", "content": reason}
+        ]
+
+        tokenized = self.tokenizer.apply_chat_template(
+            message,
+            tokenize=False,
+        )
+
+        inputs = self.tokenizer(
+            tokenized,
+            truncation=False,
+            padding=False,
+            return_overflowing_tokens=False,
+            return_length=False,
+            # add_special_token=False,
+            return_attention_mask=True,
+        )
+
+        if self.do_train:
+            return {
+                "input_ids": inputs["input_ids"],
+                "attention_mask": inputs["attention_mask"],
+                "labels": inputs["input_ids"].copy(),
+            }
+        return {
+            "input_ids": inputs["input_ids"],
+            "attention_mask": inputs["attention_mask"],
+        }
