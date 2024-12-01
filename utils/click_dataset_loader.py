@@ -5,7 +5,7 @@ import argparse
 import pandas as pd
 from datasets import load_dataset
 
-from utils import load_config, split_questions
+from utils import load_config, split_questions, tag_indexing_df
 
 
 def main(args):
@@ -75,12 +75,9 @@ def main(args):
                    "KIIP_law", "Kedu_economy", "Kedu_tradition", "PSAT"] ## + Kedu, Kedu_society(only paragraph == question)
 
     ## index extraction
-    idx_train_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_train]))
-    idx_train_2 = (
-        df["id"].apply(
-            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
-        )
-    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    tags_additional = ["Kedu_society", "Kedu_history", "PSE"]
+    idx_train_1 = tag_indexing_df(df, tags_train)
+    idx_train_2 = tag_indexing_df(df, tags_additional) & (df["question"] != df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
     idx_train_3 = (
         df["id"].apply(
             lambda x: bool(re.match(r"^Kedu_[0-9]+", x))
@@ -88,12 +85,8 @@ def main(args):
     ) & (df["question"] != df["paragraph"]) ## Kedu(only paragraph == question)
     idx_train = idx_train_1 | idx_train_2 | idx_train_3
 
-    idx_augment_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_augment]))
-    idx_augment_2 = (
-        df["id"].apply(
-            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
-        )
-    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    idx_augment_1 = tag_indexing_df(df, tags_augment)
+    idx_augment_2 = tag_indexing_df(df, tags_additional) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph == question)
     idx_augment_3 = (
         df["id"].apply(
             lambda x: bool(re.match(r"^Kedu_[0-9]+", x))

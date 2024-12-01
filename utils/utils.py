@@ -86,3 +86,11 @@ def split_questions(df, split_types):
     print(results)
 
     return df
+
+
+def tag_indexing(data_id, tags):
+    return any([data_id.startswith(tag) for tag in tags])
+
+
+def tag_indexing_df(df, tags):
+    return df["id"].apply(tag_indexing, tags=tags)
