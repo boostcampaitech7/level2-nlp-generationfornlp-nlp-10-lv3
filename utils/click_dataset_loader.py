@@ -5,20 +5,8 @@ import argparse
 import pandas as pd
 from datasets import load_dataset
 
-from utils import load_config
+from utils import load_config, split_question
 
-def srch_ptrn(pattern, text):  ## search for data that needs to be split using a search pattern
-    return True if re.match(pattern, text) else False
-
-def split_question(
-        question,
-        paragraph,
-        pattern
-):
-    if question == paragraph:  ## for case the paragraph is empty
-        return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
-    else:  ## not empty
-        return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
 
 def main(args):
     configs = load_config(args.config_path)

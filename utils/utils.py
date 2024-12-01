@@ -1,6 +1,7 @@
 # 표준 라이브러리
 import random
 import yaml
+import re
 
 # 외부 라이브러리
 import numpy as np
@@ -36,3 +37,14 @@ def extract_answer(text):
         answer = answer_part.split("\n")[0]
         return answer
     return ""
+
+
+def split_question(
+        question,
+        paragraph,
+        pattern
+):
+    if question == paragraph:  ## for case the paragraph is empty
+        return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
+    else:  ## not empty
+        return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
