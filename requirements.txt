@@ -17,3 +17,7 @@ langchain_community
 langchain_milvus
 unsloth
 triton==2.3.0
+absl-py 
+nltk 
+rouge-score
+sacrebleu
