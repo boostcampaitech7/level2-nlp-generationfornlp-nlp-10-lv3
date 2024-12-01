@@ -6,10 +6,10 @@ import pandas as pd
 # 외부 라이브러리
 import torch
 from tqdm import tqdm
-from transformers import AutoModelForCausalLM
+from transformers import AutoModelForCausalLM, TextStreamer
 from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
 from peft import LoraConfig, AutoPeftModelForCausalLM
-
+from unsloth import FastLanguageModel
 # 로컬 모듈
 from utils.metrics import preprocess_logits_for_metrics, compute_metrics
 
@@ -22,9 +22,9 @@ class BaseModel:
         
         self.model = model
         self.tokenizer = tokenizer
-        tokenizer.pad_token = tokenizer.eos_token
-        tokenizer.pad_token_id = tokenizer.eos_token_id
-        tokenizer.special_tokens_map
+        # tokenizer.pad_token = tokenizer.eos_token
+        # tokenizer.pad_token_id = tokenizer.eos_token_id
+        # tokenizer.special_tokens_map
         tokenizer.padding_side = configs.padding_side
 
         self.data_collator = DataCollatorForCompletionOnlyLM(
@@ -40,7 +40,7 @@ class BaseModel:
             output_dir=os.path.join("./saved/models", configs.train_model_path_or_name),
             per_device_train_batch_size=1,
             per_device_eval_batch_size=1,
-            gradient_checkpointing=True, # 연산속도 느려짐. # VRAM 줄이는 용도
+            # gradient_checkpointing=True, # 연산속도 느려짐. # VRAM 줄이는 용도
             gradient_accumulation_steps=4,
             num_train_epochs=self.configs.num_train_epochs,
             learning_rate=self.configs.learning_rate,
@@ -79,22 +79,18 @@ class BaseModel:
 
         self.trainer.train()
 
-    def eval(self, eval_dataset):
-        pass 
-
-        return # 데이터 프레임 (판다스)
-
     def inference_generate(self, test_dataset): # 현재 작동 X
         # test_datsaet은 Tokenized가 된 데이터셋이 아님
         generated_infer_results = []
         
-        self.model.eval()
-        
+        # self.model.eval()
+        FastLanguageModel.for_inference(self.model)
+        text_streamer = TextStreamer(self.tokenizer)
+
         with torch.inference_mode():
             for idx in tqdm(range(len(test_dataset))):
                 _id = test_dataset[idx]['id']
                 messages = test_dataset[idx]["messages"]
-                len_choices = test_dataset[idx]["len_choices"]
 
                 inputs = self.tokenizer.apply_chat_template(
                     messages,
@@ -105,27 +101,49 @@ class BaseModel:
                 
                 outputs = self.model.generate(
                     inputs,
-                    max_new_tokens=2,
-                    pad_token_id=self.tokenizer.pad_token_id
+                    max_new_tokens=512,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    streamer=text_streamer
                 )
-
+                
                 generate_text = self.tokenizer.batch_decode(
-                    outputs[:, inputs.input_ids.shape[1]:], skip_special_tokens=True
+                    outputs[:, inputs.shape[1]:], skip_special_tokens=True
                 )[0]
-                print(generate_text)
-                generate_text.strip()
-                generated_infer_results.append({"id":idx, "target":generate_text})
+                generate_text = generate_text.strip()
+                generated_infer_results.append({"id":_id, "answer":generate_text})
         
         return generated_infer_results
 
+    def inference_vllm(self, test_dataset):
+        infer_results = []
+        pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
+        # self.model.eval()
+        # test_dataset : Not Tokenized Dataset
+        # apply_chat_template
+        
+        with torch.inference_mode():
+            for idx in tqdm(range(len(test_dataset))):
+                # Tokenizing
+                _id = test_dataset[idx]['id']
+                messages = test_dataset[idx]["messages"]
+                len_choices = test_dataset[idx]["len_choices"]
 
+                tokenized = self.tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=True,
+                    add_generation_prompt=True,
+                    return_tensors="pt",
+                ).to(self.device)
+
+                print(self.tokenizer.decode(tokenized[0], skip_special_tokens=False))
+            
     def inference(self, test_dataset):
         infer_results = []
         decoded_results = []
 
         pred_choices_map = {0: "1", 1: "2", 2: "3", 3: "4", 4: "5"}
         self.model.eval()
-
+        print(test_dataset)
         with torch.inference_mode():
             for idx in tqdm(range(len(test_dataset))):
                 _id = test_dataset[idx]['id']

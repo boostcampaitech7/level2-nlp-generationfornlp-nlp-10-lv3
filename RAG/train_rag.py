@@ -7,10 +7,10 @@ import random
 import pandas as pd
 import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from unsloth import FastLanguageModel
 
 # 로컬 모듈
 from data_loader.datasets import BaseDataset
+from data_loader.rag_datasets import RAGDataset
 from models.base_model import BaseModel
 from utils.utils import load_config, set_seed
 
@@ -50,39 +50,14 @@ def main() :
         trust_remote_code=True,
     )
 
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name = "unsloth/Qwen2.5-32B-Instruct-bnb-4bit",
-        max_seq_length = 2048,
-        dtype = torch.float16,
-        load_in_4bit = True,
-        device_map="auto",
-        trust_remote_code=True,   
-    )
-    
-
-    model = FastLanguageModel.get_peft_model(
-        model,
-        r = 16,
-        target_modules = ["q_proj", "k_proj"],
-        lora_alpha = 16,
-        lora_dropout = 0, # Supports any, but = 0 is optimized
-        bias = "none",    # Supports any, but = "none" is optimized
-        # [NEW] "unsloth" uses 30% less VRAM, fits 2x larger batch sizes!
-        use_gradient_checkpointing = "unsloth", # True or "unsloth" for very long context
-        random_state = 3407,
-        use_rslora = False,  # We support rank stabilized LoRA
-        loftq_config = None, # And LoftQ
-    )        
-
     if configs.chat_template is not None :
         tokenizer.chat_template = configs.chat_template
-
 
     train_data = pd.read_csv(os.path.join(configs.data_dir, configs.train_path))
     eval_data = pd.read_csv(os.path.join(configs.data_dir, configs.val_path))
 
-    train_dataset = BaseDataset(train_data, tokenizer, configs)
-    eval_dataset = BaseDataset(eval_data, tokenizer, configs)
+    train_dataset = RAGDataset(train_data, tokenizer, configs)
+    eval_dataset = RAGDataset(eval_data, tokenizer, configs)
 
     model = BaseModel(configs, tokenizer, model)
 
