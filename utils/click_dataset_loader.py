@@ -5,7 +5,7 @@ import argparse
 import pandas as pd
 from datasets import load_dataset
 
-from utils import load_config, split_question
+from utils import load_config, split_questions
 
 
 def main(args):
@@ -48,7 +48,6 @@ def main(args):
     df.loc[idx, "paragraph"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
 
     # split
-    ## type1. 다음 ~~ ? + paragraph
     split_types = [
         {
             "search_patterns": [r"^다음.+\?.+", r"^다음.+\?\n"],
@@ -67,38 +66,7 @@ def main(args):
             "pattern": r".+것은\?"
         },
     ]
-
-    num_of_cases = len(split_types)
-    cnt = {f"Type_{i}": 0 for i in range(1, num_of_cases+1)}
-    questions = []
-    paragraphs = []
-    for _, row in df.iterrows():
-        for idx, split_type in enumerate(split_types):
-            if any([row.id.startswith(x) for x in ["KIIP", "PSAT"]]): ## exclude simple question type
-                continue
-            if any([bool(re.match(search_pattern, row.question)) for search_pattern in split_type["search_patterns"]]):
-                question, paragraph = split_question(
-                    question=row.question,
-                    paragraph=row.paragraph,
-                    pattern=split_type["pattern"]
-                )
-                questions.append(question)
-                paragraphs.append(paragraph)
-                cnt[f"Type_{idx+1}"] += 1
-
-                break
-        else:
-            questions.append(row.question)
-            paragraphs.append(row.paragraph)
-
-    df["question"] = questions
-    df["paragraph"] = paragraphs
-
-    cnt["unsplitted"] = df.shape[0] - sum(cnt.values())
-    cnt["total"] = df.shape[0]
-    results = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
-    print("**Results for text split**")
-    print(results)
+    df = split_questions(df, split_types)
 
     # group the data by id type / group = ["train", "augment", "remove"]
     ## ID tags for each training, augmentation
