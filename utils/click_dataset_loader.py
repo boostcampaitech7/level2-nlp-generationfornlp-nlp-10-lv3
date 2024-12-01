@@ -76,7 +76,7 @@ def main(args):
         for idx, split_type in enumerate(split_types):
             if any([row.id.startswith(x) for x in ["KIIP", "PSAT"]]): ## exclude simple question type
                 continue
-            if any([srch_ptrn(search_pattern, row.question) for search_pattern in split_type["search_patterns"]]):
+            if any([bool(re.match(search_pattern, row.question)) for search_pattern in split_type["search_patterns"]]):
                 question, paragraph = split_question(
                     question=row.question,
                     paragraph=row.paragraph,
