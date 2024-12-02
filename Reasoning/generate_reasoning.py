@@ -77,7 +77,7 @@ def main(arg):
 
     # call generation configuration
     GEN_CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
-    gen_configs = load_config(gen_configs.yaml)
+    gen_configs = load_config(GEN_CONFIG_DIR)
 
     # Batch API
     results = []
@@ -172,7 +172,7 @@ def main(arg):
     
     # save results
     df_final = pd.concat(results)
-    train, valid = train_test_split(df_final, test_size=0.1, random_state=arg.seed)
+    train, valid = train_test_split(df_final, test_size=arg.valid_ratio, random_state=arg.seed)
     train.to_csv(os.path.join(DATA_DIR,"reasoning_train.csv"), index=False)
     valid.to_csv(os.path.join(DATA_DIR,"reasoning_valid.csv"), index=False)
     print("All datasets are saved into train and valid")
@@ -192,6 +192,13 @@ if __name__ == "__main__":
         default="../../data/v0",
         type=str,
         help="data directory path (default: ../../data/v0)",
+    )
+    args.add_argument(
+        "-r",
+        "--valid_ratio",
+        default=0.1,
+        type=float,
+        help="validation ratio (default: 0.1)",
     )
 
     arg = args.parse_args()
