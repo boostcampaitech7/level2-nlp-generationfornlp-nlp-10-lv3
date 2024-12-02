@@ -20,6 +20,10 @@ def main():
 
     # loading model/tokenizer
     tokenizer = AutoTokenizer.from_pretrained(configs.model_id)
+    ## check response template
+    if configs.response_template not in tokenizer.chat_template:
+        raise ValueError("response_template does not match with tokenizer")
+
     model = AutoModelForCausalLM.from_pretrained(
         configs.model_id,
         torch_dtype=torch.float16,
