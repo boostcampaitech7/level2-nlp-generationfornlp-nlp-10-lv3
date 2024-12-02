@@ -11,16 +11,17 @@ from peft import AutoPeftModelForCausalLM
 from box import Box
 
 from data_loader.datasets import ReasoningDataset
+from utils.utils import load_config, set_seed
 
 
 def main(arg):
+    # random seeding
+    set_seed(arg.seed)
+
+    # loading configuration
     BASE_DIR = os.getcwd()
-    CONFIG_DIR = "Reasoning"
-    ## set seed 빠졌다
-    ## utils에 load_config 있으므로 반영
-    with open(os.path.join(BASE_DIR, CONFIG_DIR), 'r') as f:
-        configs = yaml.load(f, Loader=yaml.SafeLoader)
-    configs = Box(configs)
+    CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
+    configs = load_config(CONFIG_DIR)
 
     MODEL_DIR = os.path.join("saved", "models")
     model_path = os.path.join(BASE_DIR, MODEL_DIR, arg.checkpoint_path)
@@ -74,6 +75,13 @@ def main(arg):
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser()
+    args.add_argument(
+        "-s",
+        "--seed",
+        default=42,
+        type=int,
+        help="seed number for random seeding (default: 42)",
+    )
     args.add_argument(
         "-i",
         "--inference",
