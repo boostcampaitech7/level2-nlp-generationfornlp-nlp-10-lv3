@@ -45,12 +45,35 @@ def split_question(
         paragraph,
         pattern
 ):
+    """
+    In case the question is combined with a paragraph,
+    this function splits the combined text into a question and a paragraph.
+
+    Args:
+        question (str): question in dataset
+        paragraph (str): paragraph in dataset
+        pattern (str): regex pattern for searching combined text
+
+    Returns:
+        tuple[str, str]: splitted question and paragraph
+    """
     if question == paragraph:  ## for case the paragraph is empty
         return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
     else:  ## not empty
         return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
 
 def split_questions(df, split_types):
+    """
+    In case the question is combined with a paragraph,
+    this function splits the combined text into a question and a paragraph.
+
+    Args:
+        df (pd.DataFrame): dataset that includes the combined texts
+        split_types (List[str]): list of regex pattern for searching combined text
+
+    Returns:
+        pd.DataFrame: dataframe that is replaced with splitted questions and paragraphs
+    """
     num_of_cases = len(split_types)
     cnt = {f"Type_{i}": 0 for i in range(1, num_of_cases+1)}
 
@@ -89,8 +112,28 @@ def split_questions(df, split_types):
 
 
 def tag_indexing(data_id, tags):
+    """
+    For indexing data with ID tag
+
+    Args:
+        data_id (str): data ID
+        tags (List[str]): tags for searching
+
+    Returns:
+        bool: match of tags and id
+    """
     return any([data_id.startswith(tag) for tag in tags])
 
 
 def tag_indexing_df(df, tags):
+    """
+    For indexing data with ID tag
+
+    Args:
+        df (pd.DataFrame): dataset to search specific patterns
+        tags (List[str]): tags for searching
+
+    Returns:
+        pd.Series: matched indices
+    """
     return df["id"].apply(tag_indexing, tags=tags)
