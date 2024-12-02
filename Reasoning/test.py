@@ -23,6 +23,7 @@ def main(arg):
     CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
     configs = load_config(CONFIG_DIR)
 
+    # lodaing model/tokenizer
     MODEL_DIR = os.path.join("saved", "models")
     model_path = os.path.join(BASE_DIR, MODEL_DIR, arg.checkpoint_path)
     model = AutoPeftModelForCausalLM.from_pretrained(
@@ -33,6 +34,7 @@ def main(arg):
     )
     tokenizer = AutoTokenizer.from_pretrained(configs.model_id)
 
+    # loading dataset
     DATA_DIR = "../../data"
     FILE_NAME = "output.csv" if arg.inference else "reasoning_valid.csv"
     eval_data = pd.read_csv(os.path.join(BASE_DIR, DATA_DIR, FILE_NAME))
@@ -43,8 +45,9 @@ def main(arg):
         do_train=~arg.inference
     )
 
+    # generating answer
     outputs = []
-    cnt = 0
+    cnt = 0 ## for counting that model could not solve
     for row in tqdm(eval_dataset):
         answer = model.generate(
             torch.tensor(row["input_ids"], device="cuda").unsqueeze(0),
@@ -70,7 +73,8 @@ def main(arg):
         print("Submission Updated!")
     else:
         eval_data["pred"] = outputs
-        print(f"This model has an accuracy of {sum(eval_data["pred"] == eval_data["answer"])/eval_data.shape[0]:.4f}")
+        acc = sum(eval_data["pred"] == eval_data["answer"])/eval_data.shape[0]
+        print(f"This model has an accuracy of {acc:.4f}")
 
 
 if __name__ == "__main__":
