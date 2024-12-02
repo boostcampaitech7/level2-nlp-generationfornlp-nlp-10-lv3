@@ -75,6 +75,10 @@ def main(arg):
         ) for _, row in df.iterrows()
     ]
 
+    # call generation configuration
+    GEN_CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
+    gen_configs = load_config(gen_configs.yaml)
+
     # Batch API
     results = []
     for i, sys_prompt in enumerate(sys_prompts):
@@ -91,15 +95,15 @@ def main(arg):
                         {"role": "user", "content": usr_prompt}
                     ],
                     ## hard coding 수정 해야함
-                    'max_tokens': 500,
-                    'temperature': 0,
-                    'top_p': 1,
-                    'frequency_penalty': 0,
-                    'presence_penalty': 0,
-                    'stop': None,
-                    'logprobs': True,
-                    'top_logprobs': 10,
-                    'n': 1,
+                    'max_tokens': gen_configs.max_tokens, ##500
+                    'temperature': gen_configs.temperature, ##0
+                    'top_p': gen_configs.top_p, ##1
+                    'frequency_penalty': gen_configs.frequency_penalty,#0
+                    'presence_penalty': gen_configs.presence_penalty,#0
+                    'stop': gen_configs.stop,#None
+                    'logprobs': gen_configs.logprobs,#True
+                    'top_logprobs': gen_configs.top_logprobs,#10
+                    'n': gen_configs.n,#1
                 }
             }
             requests.append(request) ## add request for each data rows
