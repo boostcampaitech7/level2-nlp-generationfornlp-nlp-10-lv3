@@ -1,18 +1,18 @@
 # 수능형 문제 풀이 모델 생성
 
-### :100: 대회 소개
+### :100: 대회 소개
 
-생성형 모델을 사용한 자연어처리 대회로써 "한국어"와 "시험"이라는 주제에 맞춰서 작은 모델들로 수능 시험을 풀이하는 대회
+생성형 모델을 사용한 자연어처리 대회로써 "한국어"와 "시험"이라는 주제에 맞춰서 작은 모델들로 수능 시험을 풀이하는 대회
 
 * 데이터 구성
   * 학습 데이터 : KMMLU / MMMLU / KLUE MRC (2031개)
   * 평가 데이터 : 수능형 문제 + KMMLU / MMMLU / KLUE MRC (869개)
 * 평가지표
-  * $$\text{Accuracy}=\frac{\text{Number of Correct Predictions}}{\text{Total Number of Predictions}}$$
+  * $$\text{Accuracy}=\dfrac{\text{Number of Correct Predictions}}{\text{Total Number of Predictions}}$$
 * 기간 : 2024.11.13 ~ 2024.11.28
 * [Wrap-up Report](./assets/figure/NLP_10_Generation_for_nlp_wrapreport.pdf)
 
-### :star: 리더 보드
+### :star: 리더 보드
 
 #### Private Leader Board (7위)
 
@@ -43,11 +43,6 @@
  ┃ ┣ 📜datasets.py
  ┃ ┗ 📜rag_datasets.py
  ┣ 📂demo_streamlit
- ┃ ┣ 📂assets
- ┃ ┃ ┗ 📜preview_1.png
- ┃ ┣ 📜app.py
- ┃ ┣ 📜README.md
- ┃ ┗ 📜run.sh
  ┣ 📂EDA
  ┣ 📂fine_tuning
  ┃ ┣ 📂configs
@@ -100,7 +95,7 @@ python train.py --config_path={config_file} # Python 사용
 
 
 
-### :bulb:주요 접근 방식
+### :bulb:주요 접근 방식
 
 | 과정              | 내용                                                         |
 | ----------------- | ------------------------------------------------------------ |
@@ -114,7 +109,7 @@ python train.py --config_path={config_file} # Python 사용
 
 
 
-### :page_facing_up: ​결과
+### :page_facing_up: ​결과
 
 ![results](./assets/figure/results.png)
 
