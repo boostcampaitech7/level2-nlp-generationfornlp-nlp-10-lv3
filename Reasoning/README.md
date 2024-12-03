@@ -13,3 +13,7 @@
 - 이후, 활용하는 데 큰 무리가 없는 상대적으로 작은 모델을 활용하여, 생성한 reasoning을 target으로서 학습한다.
 - Reasoning을 생성하기 위한 systemp prompt는 Mukherjee, Subhabrata, et al.(2023)에서 제시한 system prompt 중 4개를 발췌하여 사용했다.
 - LLM은 openAI의 GPT-40-mini를 활용했다.
+
+## Result
+- validation set 기준으로 basline 결과 0.49에서 reasoning 결과 0.87로 대폭 상승 있었으나, 기한 마감으로 인해 실제 test 결과를 확인할 수 없었다.
+- 생성 기반의 모델이므로, 모델의 한국에 생성 능력에 크게 영향을 받는다. 따라서, pre-trained 모델 자체의 한국어 생성 능력 확인이 필요하다.
