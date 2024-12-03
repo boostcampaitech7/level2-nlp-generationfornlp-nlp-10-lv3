@@ -54,7 +54,7 @@ bias : "none"
 task_type : "CAUSAL_LM"
 
 # prompt
-SYSTEM_PROMPT:
+PROMPT_SYSTEM_MESSAGE:
   "지문을 읽고 질문의 답을 구하세요."
 PROMPT_NO_QUESTION_PLUS: >
   지문:
