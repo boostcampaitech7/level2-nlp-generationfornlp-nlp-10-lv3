@@ -1,0 +1,6 @@
+data/*
+saved/*
+__pycache__
+wandb/*
+.env
+wikiextractor

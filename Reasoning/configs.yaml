@@ -1,0 +1,25 @@
+- model_id: LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct
+- response_template: [|assistant|]
+- data_dir: ../../data
+- train_path: reasoning_train.csv
+- val_path: reasoning_valid.csv
+- max_seq_length: 4096
+- max_new_tokens: 800
+- num_train_epochs: 2
+- learning_rate: 2.0e-5
+- weight_decay: 0.01
+- logging_steps: 1
+- save_total_limit: 2
+- rank: 8
+- lora_alpha: 8
+- lora_dropout: 0.05
+- target_modules:
+  - q_proj
+  - k_proj
+- bias: none
+- task_type: CAUSAL_LM
+- USER_PROMPT: >
+  지문의 내용을 기반으로 선지에서 질문에 대한 정답을 골라서 1, 2, 3, 4, 5 중 하나의 번호를 "정답 : 번호"의 형태로 답해주세요.
+  지문: {paragraph}
+  질문: {question}
+  선지: {choices}

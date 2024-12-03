@@ -1,0 +1,43 @@
+# seed
+seed: 
+  42
+
+# wandb
+project:
+  "Fintuning"
+sub_project:
+  "lora8_qa_inference"
+
+# data
+data_path:
+  "/data/ephemeral/home/data/v1/fine_tuning/qa_dataset"
+output_path:
+  "/data/ephemeral/home/leeinseol/level2-nlp-generationfornlp-nlp-10-lv3/saved/outputs/lora8_qa.csv"
+
+# model
+do_train: False
+ft_model_path_or_name:
+  "/data/ephemeral/home/leeinseol/level2-nlp-generationfornlp-nlp-10-lv3/saved/fine_tuning/LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct/checkpoint-1345"
+#  "LGAI-EXAONE/EXAONE-3.0-7.8B-Instruct"
+output_dir:
+ "/data/ephemeral/home/leeinseol/level2-nlp-generationfornlp-nlp-10-lv3/saved/fine_tuning"
+max_length: 1250
+
+# use_lora: True # False, using for evaluate pre-trained model
+lora_rank: 8
+lora_alpha: 8
+lora_target_modules:
+  - "q_proj"
+  - "v_proj"
+lora_dropout: 0.1
+lora_bias: "none"
+lora_task_type: "CAUSAL_LM"
+
+steps: 20
+save_total_limit: 2
+batch_size: 1
+gradient_accumulation_steps: 8
+num_train_epochs: 5
+lr_scheduler_type: "cosine"
+learning_rate: 2e-5
+weight_decay: 0.01
