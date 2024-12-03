@@ -4,22 +4,32 @@ import numpy as np
 # Vector DB 구현
 
 class MilvusDatabase:
-    def __init__(self, uri, collection_name, embedding_dim):
+    def __init__(self, uri, collection_name, embedding_dim, use_langchain=True):
         self.milvus_client = MilvusClient(uri=uri) # milvus init
         self.collection_name = collection_name
         self.embedding_dim = embedding_dim
+        self.use_langchain = use_langchain
 
     def set_collection(self):
         # Create Collection
-        if not self.milvus_client.has_collection(self.collection_name):
-            schema = self.create_schema()
-            index_param = self.create_index()
+        if self.use_langchain: 
+            if not self.milvus_client.has_collection(self.collection_name):
+                schema = self.create_schema()
+                index_param = self.create_index()
 
-            self.milvus_client.create_collection(
-                collection_name=self.collection_name,
-                schema=schema,
-                index_params=index_param
-            )
+                self.milvus_client.create_collection(
+                    collection_name=self.collection_name,
+                    schema=schema,
+                    index_params=index_param
+                )
+        else:
+            if not self.milvus_client.has_collection(self.collection_name):
+                self.milvus_client.create_collection(
+                    collection_name=self.collection_name,
+                    dimension=self.embedding_dim, # embedding dimension
+                    metric_type="COSINE", #innuer product
+                    consistency_level="Strong"
+                )
 
      # 스키마 생성
     def create_schema(self):
@@ -44,18 +54,24 @@ class MilvusDatabase:
 
     def insert_data(self, collection_name, datasets):
         # Insert Data to Collection
-        
         for i in tqdm(range(len(datasets)), desc="Insert Data to Milvus DB"):
             row = datasets.iloc[i]
-            vector = np.array(row["emb"], dtype=np.float32)
-            data = {
-                "text": row["text"],
-                "vector": vector,
-            }
+            if self.use_langchain:
+                vector = np.array(row["emb"], dtype=np.float32)
+                data = {
+                    "text": row["text"],
+                    "embedding": vector,
+                }
+            else:
+                data = {
+                    "id": row["id"],
+                    "text": row["text"],
+                    "vector": row["emb"],
+                }
             
             self.milvus_client.insert(collection_name=collection_name,
-                                  data=data)
-        
+                                data=data)  
+                
         print("Done. Insert Data")
   
     def drop_collection(self):
