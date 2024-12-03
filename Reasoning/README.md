@@ -17,3 +17,6 @@
 ## Result
 - validation set 기준으로 basline 결과 0.49에서 reasoning 결과 0.87로 대폭 상승 있었으나, 기한 마감으로 인해 실제 test 결과를 확인할 수 없었다.
 - 생성 기반의 모델이므로, 모델의 한국에 생성 능력에 크게 영향을 받는다. 따라서, pre-trained 모델 자체의 한국어 생성 능력 확인이 필요하다.
+
+## Reference
+- Mukherjee, Subhabrata, et al. "Orca: Progressive learning from complex explanation traces of gpt-4." arXiv preprint arXiv:2306.02707 (2023).
