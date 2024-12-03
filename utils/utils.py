@@ -1,9 +1,11 @@
 # 표준 라이브러리
 import random
 import yaml
+import re
 
 # 외부 라이브러리
 import numpy as np
+import pandas as pd
 from box import Box
 import torch
 
@@ -36,3 +38,102 @@ def extract_answer(text):
         answer = answer_part.split("\n")[0]
         return answer
     return ""
+
+
+def split_question(
+        question,
+        paragraph,
+        pattern
+):
+    """
+    In case the question is combined with a paragraph,
+    this function splits the combined text into a question and a paragraph.
+
+    Args:
+        question (str): question in dataset
+        paragraph (str): paragraph in dataset
+        pattern (str): regex pattern for searching combined text
+
+    Returns:
+        tuple[str, str]: splitted question and paragraph
+    """
+    if question == paragraph:  ## for case the paragraph is empty
+        return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
+    else:  ## not empty
+        return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
+
+def split_questions(df, split_types):
+    """
+    In case the question is combined with a paragraph,
+    this function splits the combined text into a question and a paragraph.
+
+    Args:
+        df (pd.DataFrame): dataset that includes the combined texts
+        split_types (List[str]): list of regex pattern for searching combined text
+
+    Returns:
+        pd.DataFrame: dataframe that is replaced with splitted questions and paragraphs
+    """
+    num_of_cases = len(split_types)
+    cnt = {f"Type_{i}": 0 for i in range(1, num_of_cases+1)}
+
+    questions = []
+    paragraphs = []
+    for _, row in df.iterrows():
+        for idx, split_type in enumerate(split_types):
+            if any([row.id.startswith(x) for x in ["KIIP", "PSAT"]]): ## exclude simple question type
+                continue
+            if any([bool(re.match(search_pattern, row.question)) for search_pattern in split_type["search_patterns"]]):
+                question, paragraph = split_question(
+                    question=row.question,
+                    paragraph=row.paragraph,
+                    pattern=split_type["pattern"]
+                )
+                questions.append(question)
+                paragraphs.append(paragraph)
+                cnt[f"Type_{idx+1}"] += 1
+
+                break
+        else:
+            questions.append(row.question)
+            paragraphs.append(row.paragraph)
+
+    df["question"] = questions
+    df["paragraph"] = paragraphs
+
+    ## logging
+    cnt["unsplitted"] = df.shape[0] - sum(cnt.values())
+    cnt["total"] = df.shape[0]
+    results = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
+    print("**Results for text split**")
+    print(results)
+
+    return df
+
+
+def tag_indexing(data_id, tags):
+    """
+    For indexing data with ID tag
+
+    Args:
+        data_id (str): data ID
+        tags (List[str]): tags for searching
+
+    Returns:
+        bool: match of tags and id
+    """
+    return any([data_id.startswith(tag) for tag in tags])
+
+
+def tag_indexing_df(df, tags):
+    """
+    For indexing data with ID tag
+
+    Args:
+        df (pd.DataFrame): dataset to search specific patterns
+        tags (List[str]): tags for searching
+
+    Returns:
+        pd.Series: matched indices
+    """
+    return df["id"].apply(tag_indexing, tags=tags)

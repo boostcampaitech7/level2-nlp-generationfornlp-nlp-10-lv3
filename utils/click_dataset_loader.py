@@ -5,20 +5,8 @@ import argparse
 import pandas as pd
 from datasets import load_dataset
 
-from utils import load_config
+from utils import load_config, split_questions, tag_indexing_df
 
-def srch_ptrn(pattern, text):  ## search for data that needs to be split using a search pattern
-    return True if re.match(pattern, text) else False
-
-def split_question(
-        question,
-        paragraph,
-        pattern
-):
-    if question == paragraph:  ## for case the paragraph is empty
-        return re.findall(pattern, question)[0], re.sub(pattern, "", question).strip()
-    else:  ## not empty
-        return re.findall(pattern, question)[0], paragraph + "\n" + re.sub(pattern, "", question).strip()
 
 def main(args):
     configs = load_config(args.config_path)
@@ -60,7 +48,6 @@ def main(args):
     df.loc[idx, "paragraph"] = "한국의 전통 식문화 중 반상차림에 관한 설명으로 옳지 않은 것은?"
 
     # split
-    ## type1. 다음 ~~ ? + paragraph
     split_types = [
         {
             "search_patterns": [r"^다음.+\?.+", r"^다음.+\?\n"],
@@ -79,38 +66,7 @@ def main(args):
             "pattern": r".+것은\?"
         },
     ]
-
-    num_of_cases = len(split_types)
-    cnt = {f"Type_{i}": 0 for i in range(1, num_of_cases+1)}
-    questions = []
-    paragraphs = []
-    for _, row in df.iterrows():
-        for idx, split_type in enumerate(split_types):
-            if any([row.id.startswith(x) for x in ["KIIP", "PSAT"]]): ## exclude simple question type
-                continue
-            if any([srch_ptrn(search_pattern, row.question) for search_pattern in split_type["search_patterns"]]):
-                question, paragraph = split_question(
-                    question=row.question,
-                    paragraph=row.paragraph,
-                    pattern=split_type["pattern"]
-                )
-                questions.append(question)
-                paragraphs.append(paragraph)
-                cnt[f"Type_{idx+1}"] += 1
-
-                break
-        else:
-            questions.append(row.question)
-            paragraphs.append(row.paragraph)
-
-    df["question"] = questions
-    df["paragraph"] = paragraphs
-
-    cnt["unsplitted"] = df.shape[0] - sum(cnt.values())
-    cnt["total"] = df.shape[0]
-    results = pd.DataFrame.from_dict(cnt, orient='index', columns=["count"])
-    print("**Results for text split**")
-    print(results)
+    df = split_questions(df, split_types)
 
     # group the data by id type / group = ["train", "augment", "remove"]
     ## ID tags for each training, augmentation
@@ -119,12 +75,9 @@ def main(args):
                    "KIIP_law", "Kedu_economy", "Kedu_tradition", "PSAT"] ## + Kedu, Kedu_society(only paragraph == question)
 
     ## index extraction
-    idx_train_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_train]))
-    idx_train_2 = (
-        df["id"].apply(
-            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
-        )
-    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    tags_additional = ["Kedu_society", "Kedu_history", "PSE"]
+    idx_train_1 = tag_indexing_df(df, tags_train)
+    idx_train_2 = tag_indexing_df(df, tags_additional) & (df["question"] != df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
     idx_train_3 = (
         df["id"].apply(
             lambda x: bool(re.match(r"^Kedu_[0-9]+", x))
@@ -132,12 +85,8 @@ def main(args):
     ) & (df["question"] != df["paragraph"]) ## Kedu(only paragraph == question)
     idx_train = idx_train_1 | idx_train_2 | idx_train_3
 
-    idx_augment_1 = df["id"].apply(lambda x: any([x.startswith(tag) for tag in tags_augment]))
-    idx_augment_2 = (
-        df["id"].apply(
-            lambda x: any([x.startswith(tag) for tag in ["Kedu_society", "Kedu_history", "PSE"]])
-        )
-    ) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph != question)
+    idx_augment_1 = tag_indexing_df(df, tags_augment)
+    idx_augment_2 = tag_indexing_df(df, tags_additional) & (df["question"] == df["paragraph"]) ## PSE, Kedu_society, Kedu_history(only paragraph == question)
     idx_augment_3 = (
         df["id"].apply(
             lambda x: bool(re.match(r"^Kedu_[0-9]+", x))
