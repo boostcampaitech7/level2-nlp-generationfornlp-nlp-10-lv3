@@ -1,0 +1,9 @@
+- max_tokens: 500
+- temperature: 0
+- top_p: 1
+- frequency_penalty: 0
+- presence_penalty: 0
+- stop: None
+- logprobs: True
+- top_logprobs: 10
+- n: 1
