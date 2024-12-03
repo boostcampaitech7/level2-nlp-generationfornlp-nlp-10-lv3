@@ -199,6 +199,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         "len_choices": len(row['choices']),
                     }
                 )
+
         if self.rag_model:
             torch.cuda.empty_cache()
             del self.rag_model
