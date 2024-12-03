@@ -37,6 +37,7 @@
 
 ```
 📦level2-nlp-generationfornlp-nlp-10-lv3
+ ┣ 📂assets
  ┣ 📂configs
  ┣ 📂data
  ┣ 📂data_loader
@@ -54,15 +55,21 @@
  ┃ ┣ 📜base_model.py
  ┃ ┗ 📜fine_tuning_model.py
  ┣ 📂RAG
- ┃ ┣ 📜inference_rag.py
- ┃ ┣ 📜milvus_database.py
- ┃ ┣ 📜retrieval.py
- ┃ ┣ 📜train_rag.py
- ┃ ┣ 📜vectorStore.py
- ┃ ┗ 📜wikipedia_dataset.py
+ ┃ ┣ 📂korean_textbooks
+ ┃ ┃ ┣ 📜inference_korean_textbooks.py
+ ┃ ┃ ┣ 📜korean_textbooks_dataset.py
+ ┃ ┃ ┗ 📜vectorStore_kortextbook.py
+ ┃ ┣ 📂wikipedia
+ ┃ ┃ ┣ 📜inference_rag.py
+ ┃ ┃ ┣ 📜retrieval.py
+ ┃ ┃ ┣ 📜train_rag.py
+ ┃ ┃ ┣ 📜vectorStore.py
+ ┃ ┃ ┗ 📜wikipedia_dataset.py
+ ┃ ┗ 📜milvus_database.py
  ┣ 📂Reasoning
  ┃ ┣ 📜configs.yaml
  ┃ ┣ 📜generate_reasoning.py
+ ┃ ┣ 📜gen_configs.yaml
  ┃ ┣ 📜prompts.yaml
  ┃ ┣ 📜reasoning_train.py
  ┃ ┗ 📜test.py
@@ -70,10 +77,14 @@
  ┃ ┣ 📜inference_baseline.sh
  ┃ ┗ 📜train_baseline.sh
  ┣ 📂utils
+ ┃ ┣ 📜augmentation.py
  ┃ ┣ 📜click_dataset_loader.py
  ┃ ┣ 📜metrics.py
- ┃ ┣ 📜utils.py
+ ┃ ┗ 📜utils.py
+ ┣ 📜.gitignore
+ ┣ 📜.gitmessage.txt
  ┣ 📜inference.py
+ ┣ 📜README.md
  ┣ 📜requirements.txt
  ┗ 📜train.py
 ```
