@@ -9,32 +9,39 @@ from trl import SFTTrainer, DataCollatorForCompletionOnlyLM, SFTConfig
 from peft import LoraConfig
 
 from data_loader.datasets import ReasoningDataset
+from utils.utils import load_config
 
 
 def main():
+    # loading configuration
     BASE_DIR = os.getcwd()
-    CONFIG_DIR = "Reasoning"
-    ## utils에 load_config 있으므로 반영
-    with open(os.path.join(BASE_DIR, CONFIG_DIR), 'r') as f:
-        configs = yaml.load(f, Loader=yaml.SafeLoader)
-    configs = Box(configs)
+    CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
+    configs = load_config(CONFIG_DIR)
 
+    # loading model/tokenizer
     tokenizer = AutoTokenizer.from_pretrained(configs.model_id)
+    ## check response template
+    if configs.response_template not in tokenizer.chat_template:
+        raise ValueError("response_template does not match with tokenizer")
+
     model = AutoModelForCausalLM.from_pretrained(
         configs.model_id,
         torch_dtype=torch.float16,
         trust_remote_code=True
     )
-    model.max_new_tokens = configs.max_new_tokens
+    model.max_new_tokens = configs.max_new_tokens ## setting model max new token
 
+    # loading dataset
     train_data = pd.read_csv(os.path.join(configs.data_dir, configs.train_path))
     eval_data = pd.read_csv(os.path.join(configs.data_dir, configs.val_path))
 
+    # setting response template
     data_collator = DataCollatorForCompletionOnlyLM(
-        response_template=configs.response_template, ## model과 연동되게 설정할 수는 없으려나
+        response_template=configs.response_template,
         tokenizer=tokenizer
     )
 
+    # training setting
     sft_config = SFTConfig(
         do_train=True,
         do_eval=True,
@@ -57,6 +64,7 @@ def main():
         fp16=True, # Mix Precision
         bf16=False
     )
+    # LoRA setting
     peft_config = LoraConfig(
         r=configs.rank,
         lora_alpha=configs.lora_alpha,
@@ -66,6 +74,7 @@ def main():
         task_type=configs.task_type,
     )
 
+    # calling custon dataset class
     train_dataset = ReasoningDataset(
         data=train_data,
         tokenizer=tokenizer,
@@ -79,6 +88,7 @@ def main():
         do_train=True
     )
 
+    # training
     trainer = SFTTrainer(
         model=model,
         train_dataset=train_dataset,

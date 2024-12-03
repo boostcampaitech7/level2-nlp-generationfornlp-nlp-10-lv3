@@ -6,15 +6,26 @@ from copy import deepcopy
 import pandas as pd
 import torch
 from datasets import Dataset
+from pymilvus import MilvusClient
+from tqdm import tqdm
+import nltk
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 
 
 class BaseDataset(torch.utils.data.Dataset):
     def __init__(self, data,
-                 tokenizer, configs, do_train = True):
+                 tokenizer, configs, do_train = True, use_rag=False, rag_model=None):
         self.tokenizer = tokenizer
         self.max_length = configs.max_length
         self.configs = configs
         self.do_train = do_train
+        self.use_rag = use_rag
+        if self.use_rag:
+            self.database = MilvusClient(uri=self.configs.database_path)
+            self.rag_model = rag_model
+            self.rewrite_prefix = self.configs.rewrite_prefix
+            self.rewrite_model = AutoModelForSeq2SeqLM.from_pretrained(self.configs.rewrite_model)
+            self.rewrite_tokenizer = AutoTokenizer.from_pretrained(self.configs.rewrite_model)
         self.dataset = self.format_data(data)
         self.tokens = self.tokenize(self.dataset)
         # if self.max_length is not None:
@@ -58,7 +69,7 @@ class BaseDataset(torch.utils.data.Dataset):
             _tokenize,
             remove_columns=list(dataset.features),
             batched=True,
-            num_proc=4,
+            num_proc=1,
             load_from_cache_file=True,
             desc="Tokenizing",
         )
@@ -85,7 +96,7 @@ class BaseDataset(torch.utils.data.Dataset):
             
             df = pd.DataFrame(records)
             df['question_plus'] = df['question_plus'].fillna('')
-            df['full_question'] = df.apply(lambda x: x['question'] + ' ' + x['question_plus'] if x['question_plus'] else x['question'], axis=1)
+            # df['full_question'] = df.apply(lambda x: x['question'] + ' ' + x['question_plus'] if x['question_plus'] else x['question'], axis=1)
 
             return df # pandas Dataframe 
         
@@ -96,28 +107,76 @@ class BaseDataset(torch.utils.data.Dataset):
 
         for i, row in dataset.iterrows():
             choices_string = "\n".join([f"{idx + 1} - {choice}" for idx, choice in enumerate(row["choices"])])
+            if self.use_rag: # rag 사용 
+                if len(row['paragraph']) < self.configs.rag_flag:
+                    # top_k 문서 search
+                    rewrite_result = self.rewrite_query(row)
+                    search_texts = self.database.search(
+                        collection_name=self.configs.collection_name,
+                        data=[
+                            self.rag_model.encode(rewrite_result) # row['query']
+                        ],
+                        limit=self.configs.top_k,
+                        search_params={'metric_type': "COSINE", "params": {}},
+                        output_fields=['text'], # Return the text field
+                    )
 
-            if not self.do_train :
-                len_choices = len(row['choices'])
-
-            # <보기>가 있을 때
-            if row["question_plus"]:
-                user_message = self.configs.PROMPT_QUESTION_PLUS.format(
-                    paragraph=row["paragraph"],
-                    question=row["question"],
-                    question_plus=row["question_plus"],
-                    choices=choices_string,
-                )
-            # <보기>가 없을 때
-            else:
-                user_message = self.configs.PROMPT_NO_QUESTION_PLUS.format(
-                    paragraph=row["paragraph"],
-                    question=row["question"],
-                    choices=choices_string,
-                )
+                    # 지정한 k번째 문서들 이용 
+                    hints = ""
+                    for i, k in enumerate(self.configs.use_k):
+                        hints += search_texts[0][k-1]['entity']['text']
+                        if (len(self.configs.use_k) > 1) & (i < len(self.configs.use_k)-1):
+                            hints += "\n"
+                        
+                    if row["question_plus"]: # <보기>가 있을 때
+                        user_message = self.configs.RAG_PROMPT_QUESTION_PLUS.format(
+                            paragraph=row["paragraph"],
+                            question=row["question"],
+                            question_plus=row["question_plus"],
+                            choices=choices_string,
+                            hint=hints,
+                        )
+                    
+                    else: # <보기>가 없을 때
+                        user_message = self.configs.RAG_PROMPT_NO_QUESTION_PLUS.format(
+                            paragraph=row["paragraph"],
+                            question=row["question"],
+                            choices=choices_string,
+                            hint=hints,
+                        )
+                else:
+                    if row["question_plus"]: # <보기>가 있을 때
+                        user_message = self.configs.PROMPT_QUESTION_PLUS.format(
+                            paragraph=row["paragraph"],
+                            question=row["question"],
+                            question_plus=row["question_plus"],
+                            choices=choices_string,
+                        )
+                    
+                    else: # <보기>가 없을 때
+                        user_message = self.configs.PROMPT_NO_QUESTION_PLUS.format(
+                            paragraph=row["paragraph"],
+                            question=row["question"],
+                            choices=choices_string,
+                        )
+            else: # rag 사용 x 
+                if row["question_plus"]: # <보기>가 있을 때
+                    user_message = self.configs.PROMPT_QUESTION_PLUS.format(
+                        paragraph=row["paragraph"],
+                        question=row["question"],
+                        question_plus=row["question_plus"],
+                        choices=choices_string,
+                    )
+                
+                else: # <보기>가 없을 때
+                    user_message = self.configs.PROMPT_NO_QUESTION_PLUS.format(
+                        paragraph=row["paragraph"],
+                        question=row["question"],
+                        choices=choices_string,
+                    )
             
             # chat message 형식으로 변환
-            if self.do_train:
+            if self.do_train: # 학습 및 검증 데이터
                 processed_dataset.append(
                     {
                         "id": row["id"],
@@ -129,7 +188,7 @@ class BaseDataset(torch.utils.data.Dataset):
                         "label": row["answer"],
                     }
                 )
-            else:
+            else: # 테스트 데이터 
                 processed_dataset.append(
                     {
                         "id": row["id"],
@@ -137,11 +196,33 @@ class BaseDataset(torch.utils.data.Dataset):
                             {"role": "system", "content": system_prompt},
                             {"role": "user", "content": user_message},
                         ],
-                        "len_choices": len_choices,
+                        "len_choices": len(row['choices']),
                     }
                 )
+
+        if self.rag_model:
+            torch.cuda.empty_cache()
+            del self.rag_model
+        if self.rewrite_model:
+            torch.cuda.empty_cache()
+            del self.rewrite_model
+
         return Dataset.from_pandas(pd.DataFrame(processed_dataset)) 
 
+    def rewrite_query(self, row):
+        rewrite_sample = f"지문: {row['paragraph']}\n질문: {row['question']}\n선지: {row['choices']}"
+        rewrite_inputs = [self.rewrite_prefix+rewrite_sample]
+        rewrite_inputs = self.rewrite_tokenizer(rewrite_inputs, max_length=1024, truncation=True, return_tensors='pt')
+        rewrite_output = self.rewrite_model.generate(
+            **rewrite_inputs,
+            do_sample=True,
+            min_length=10,
+            max_length=64
+        )
+        rewrite_decoded_output = self.rewrite_tokenizer.batch_decode(rewrite_output, skip_special_tokens=True)[0]
+        rewrite_result = nltk.sent_tokenize(rewrite_decoded_output.strip())[0]
+        
+        return rewrite_result
 
 class FineTuningDataset(torch.utils.data.Dataset):
     def __init__(self, data, tokenizer, configs, is_eval=False):

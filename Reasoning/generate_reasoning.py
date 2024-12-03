@@ -11,11 +11,22 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from openai import OpenAI
 
+from utils.utils import load_config
+
 
 def refactor_data(dataset):
+    """
+    re-formatting dataset
+
+    Args:
+        dataset (pd.DataFrame): dataset before re-formatting
+
+    Returns:
+        pd.DataFrame: dataset after re-formatting
+    """
     records = []
     for _, row in dataset.iterrows():
-        problems = literal_eval(row['problems'])
+        problems = literal_eval(row['problems']) ## problems: str -> dict
         record = {
             'id': row['id'],
             'paragraph': row['paragraph'],
@@ -31,27 +42,31 @@ def refactor_data(dataset):
     
     df = pd.DataFrame(records)
     df['question_plus'] = df['question_plus'].fillna('')
-    df['full_question'] = df.apply(lambda x: x['question'] + ' ' + x['question_plus'] if x['question_plus'] else x['question'], axis=1)
-
+    df['full_question'] = df.apply(
+        lambda x: x['question'] + ' ' +\
+            x['question_plus'] if x['question_plus'] else x['question'],
+        axis=1
+    )
     return df
 
 
 def main(arg):
-
+    # loading local variable - openAI API key
     load_dotenv()
     api_key = os.getenv("OPENAI_API_KEY")
 
+    # loading dataset
     BASE_DIR = os.getcwd()
     DATA_DIR = os.path.join(BASE_DIR, arg.data_dir)
     df = pd.read_csv(DATA_DIR)
-    df = refactor_data(df)
+    df = refactor_data(df) ## re-formatting dataset
 
+    # loading prompt templates for generating reasoning
     PROMPT_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
-    with open(PROMPT_DIR, 'r') as f:
-        prompts = yaml.load(f, Loader=yaml.SafeLoader)
+    prompts = load_config(PROMPT_DIR)
 
-    sys_prompts = prompts["sys_prompts"]
-    usr_prompt_template = prompts["usr_prompt_template"]
+    sys_prompts = prompts.sys_prompts
+    usr_prompt_template = prompts.usr_prompt_template
     usr_prompts = [
         usr_prompt_template.format(
             paragraph=row.paragraph,
@@ -60,6 +75,11 @@ def main(arg):
         ) for _, row in df.iterrows()
     ]
 
+    # call generation configuration
+    GEN_CONFIG_DIR = os.path.join(BASE_DIR, "Reasoning", "prompts.yaml")
+    gen_configs = load_config(GEN_CONFIG_DIR)
+
+    # Batch API
     results = []
     for i, sys_prompt in enumerate(sys_prompts):
         requests = []
@@ -75,23 +95,24 @@ def main(arg):
                         {"role": "user", "content": usr_prompt}
                     ],
                     ## hard coding 수정 해야함
-                    'max_tokens': 500,
-                    'temperature': 0,
-                    'top_p': 1,
-                    'frequency_penalty': 0,
-                    'presence_penalty': 0,
-                    'stop': None,
-                    'logprobs': True,
-                    'top_logprobs': 10,
-                    'n': 1,
+                    'max_tokens': gen_configs.max_tokens, ##500
+                    'temperature': gen_configs.temperature, ##0
+                    'top_p': gen_configs.top_p, ##1
+                    'frequency_penalty': gen_configs.frequency_penalty,#0
+                    'presence_penalty': gen_configs.presence_penalty,#0
+                    'stop': gen_configs.stop,#None
+                    'logprobs': gen_configs.logprobs,#True
+                    'top_logprobs': gen_configs.top_logprobs,#10
+                    'n': gen_configs.n,#1
                 }
             }
-            requests.append(request)
+            requests.append(request) ## add request for each data rows
 
         with open("requests.jsonl", "w") as f:
             for request in requests:
                 f.write(json.dumps(request) + "\n")
         
+        # call batch API
         client = OpenAI(api_key=api_key)
         batch_input_file = client.files.create(
             file=open("requests.jsonl", "rb"),
@@ -103,6 +124,7 @@ def main(arg):
             completion_window="24h"
         )
 
+        # status checking
         print(f"\nNow using {i}-th system prompt for generating reasoning...")
         while True:
             batches = client.batches.list().data[0]
@@ -135,7 +157,8 @@ def main(arg):
             else:
                 print("The process is canceled")
                 break
-
+        
+        # receive results
         result_file_id = client.batches.retrieve(batch_job.id).output_file_id
         result = client.files.content(result_file_id).content.decode('utf-8')
         result = [json.loads(line)["response"]["body"]["choices"][0]["message"]["content"]
@@ -146,9 +169,10 @@ def main(arg):
         df["sys"] = sys_prompt
         results.append(df_res)
         print(f"{i}-th system prompt's generation is done.\n")
-
+    
+    # save results
     df_final = pd.concat(results)
-    train, valid = train_test_split(df_final, test_size=0.1, random_state=arg.seed)
+    train, valid = train_test_split(df_final, test_size=arg.valid_ratio, random_state=arg.seed)
     train.to_csv(os.path.join(DATA_DIR,"reasoning_train.csv"), index=False)
     valid.to_csv(os.path.join(DATA_DIR,"reasoning_valid.csv"), index=False)
     print("All datasets are saved into train and valid")
@@ -168,6 +192,13 @@ if __name__ == "__main__":
         default="../../data/v0",
         type=str,
         help="data directory path (default: ../../data/v0)",
+    )
+    args.add_argument(
+        "-r",
+        "--valid_ratio",
+        default=0.1,
+        type=float,
+        help="validation ratio (default: 0.1)",
     )
 
     arg = args.parse_args()

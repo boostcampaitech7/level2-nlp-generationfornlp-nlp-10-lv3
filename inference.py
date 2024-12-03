@@ -13,6 +13,16 @@ from models.base_model import BaseModel
 from utils.utils import load_config, set_seed
 from unsloth import FastLanguageModel
 
+from dotenv import load_dotenv
+from huggingface_hub import login
+import wandb
+
+load_dotenv()
+hf_api_key = os.getenv('HF_API_KEY')
+wandb_api_key = os.getenv('WANDB_API_KEY')
+
+login(hf_api_key)
+wandb.login(key=wandb_api_key)
 
 def main() :
     parser = argparse.ArgumentParser()
